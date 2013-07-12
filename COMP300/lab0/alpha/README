@@ -1,0 +1,5 @@
+Alpha release for our ISA.  
+
+Function calls are implemented for fibo.
+
+For the random observer, yes, fibo doesn't calculate the correct value . . . it's not supposed to.

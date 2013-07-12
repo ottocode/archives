@@ -1,0 +1,594 @@
+\documentclass{article}
+
+\usepackage{fancyhdr}
+\usepackage{enumitem} %allows enumerate resume
+\setlength{\headheight}{12pt}
+\pagestyle{fancy}
+
+%set-up page dimentions
+\usepackage[top=1.5 in, bottom = 1.5 in ,left = 1.5 in, right = 1.5in]{geometry}
+
+\setlength{\parskip}{12pt} % 12 pt = space between paragraphs
+\setlength{\parindent}{0pt} % 0 pt = indentation
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{ifthen}
+\usepackage{latexsym}
+\usepackage{graphicx}
+\usepackage{graphics}
+\usepackage{psfrag}
+\usepackage{graphpap}
+\usepackage{fullpage}
+\renewcommand{\P}{\text{P}}
+\newcommand{\C}{\text{C}}
+
+
+% Allows hyperlinks if compiled with pdflatex
+\usepackage{hyperref}
+\hypersetup{colorlinks}
+\usepackage{color}
+\definecolor{darkred}{rgb}{0.5,0,0}
+\definecolor{darkgreen}{rgb}{0,0.5,0}
+\definecolor{darkblue}{rgb}{0,0,0.5}
+\hypersetup{ colorlinks,
+                linkcolor=darkblue,
+                filecolor=darkgreen,
+                urlcolor=darkblue,
+                citecolor=darkblue }
+%hyperlink example is: \href{http://www.google.com}{google}
+
+
+
+\begin{document}
+\begin{center}
+ISA Design Concept Stage\\
+Marc Slaughter and Nicholas Otto\\
+February 11, 2013\\
+\vspace{1.5em}
+\hrule
+\end{center}
+
+\section{MIPS implementation of UltraMega}
+\begin{verbatim}
+# definitions:
+# $t0 temp
+# $a0 pc $a0 since first argument
+# $a1 mem $a1 since second argument
+# $t3 inst
+# $t4 op
+# $t5 srcA
+# $t6 srcB
+# $t7 dest
+
+ultraMegaMips:
+tagA:   ori $t0, $zero, 4
+        mul $t0, $a0, $t0
+        add $t3, $a1, $t0
+        lw $t4, $t3 # Get $t4
+        lw $t5, 4($t3) # Get $t5
+        lw $t6, 8($t3) # Get $t6
+        lw $t7, 12($t3) # Get $t7
+        addi $a0, $a0, 4
+
+########case 0######################
+        bne $t4, $zero, tag1
+        mul $t5, $t5, 4
+        add $t0, $a1, $t5
+        lw $t5, $t0 #$t5 = M[$t5]
+        mul $t6, $t6, 4
+        add $t0, $a1, $t6
+        lw $t6, $t0 #$t6 = M[$t6]
+
+        sub $t0, $t5, $t6
+        mul $t7, $t7, 4
+        add $t7, $a1, $t7
+        sw $t0, $t7
+        j tagA
+        
+        
+########case 1######################
+tag1:
+        ori $t0, $zero, 1
+        bne $t4, $t0, tag2
+        mul $t5, $t5, 4
+        add $t0, $a1, $t5
+        lw $t5, $t0 #$t5 = M[$t5]
+        srl $t5, $t5, 1
+
+        mul $t7, $t7, 4 #get $t7
+        add $t7, $a1, $t7
+        sw $t5, $t7 #store
+        j tagA
+########case 2######################
+tag2:
+        ori $t0, $zero, 2
+        bne $t4, $t0, tag3
+        mul $t5, $t5, 4
+        add $t0, $a1, $t5
+        lw $t5, $t0 #$t5 = M[$t5]
+        mul $t6, $t6, 4
+        add $t0, $a1, $t6
+        lw $t6, $t0 #$t6 = M[$t6]
+        nor $t0, $t5, $t6
+        
+        mul $t7, $t7, 4 #get $t7
+        add $t7, $a1, $t7
+        sw $t0, $t7 #store
+        j tagA
+########case 3######################
+tag3:
+        ori $t0, $zero, 3
+        bne $t4, $t0, tag4
+        mul $t5, $t5, 4
+        add $t0, $a1, $t5
+        lw $t5, $t0 #$t5 = M[$t5]
+        mul $t5, $t5, 4
+        add $t0, $a1, $t5
+        lw $t5, $t0 #$t5 = M[M[$t5]]
+        mul $t6, $t6, 4
+        add $t0, $a1, $t6
+        lw $t6, $t0 #$t6 = M[$t6]
+        mul $t7, $t7, 4 #get $t7
+        add $t7, $a1, $t7
+        sw $t7, $t5 # $t7 = MM$t5
+        sw $t5, $t6 # MM$t5 = M$t6
+        j tagA
+########case 4######################
+tag4:
+        ori $t0, $zero, 4
+        bne $t4, $t0, tag5
+        mul $t5, $t5, 4
+        add $t0, $a1, $t5
+        lw $t5, $t0
+        mul $t7, $t7, 4
+        add $t0, $a1, $t7
+        lw $t7, $t0 #$t7 = M[$t7]
+        IN $t7, $t5
+        j tagA
+########case 5######################
+tag5:
+        ori $t0, $zero, 5
+        bne $t4, $t0, tag6
+        mul $t5, $t5, 4
+        add $t0, $a1, $t5
+        lw $t5, $t0
+        mul $t6, $t6, 4
+        add $t0, $a1, $t6
+        lw $t6, $t0 #$t6 = M[$t6]
+        OUT $t5, $t6
+j tagA
+########case 6######################
+tag6:
+        ori $t0, $zero, 6
+        bne $t4, $t0, tag7
+        mul $t5, $t5, 4
+        add $t0, $a1, $t5
+        lw $t5, $t0
+        mul $t6, $t6, 4
+        add $t0, $a1, $t6
+        lw $t6, $t0
+        mul $t7, $t7, 4
+        add $t0, $a1, $t7
+        lw $t7, $t0
+        sw $t7, $a0
+        bge $t5, $zero, tagA
+        or $a0, $t6, 0
+        j tagA
+########case 7######################
+tag7:
+        ori $t0, $zero, 7
+        bne $t4, $t0, tag8
+        ori $v0, $a0, $zero # put $a0 i.e. pc into $v0 to return
+        jr $ra
+########no case#######################
+tag8:
+        j tagA
+\end{verbatim}
+
+\section{Our ISA implementation of UltraMega}
+
+\begin{verbatim}
+#define
+pc = $1
+mem = $2
+inst = $3
+op = $4
+srcA = $5
+srcB = $6
+dest = $7
+temp = $0
+INT_SIZE = 1
+#end
+
+
+tagA: add inst, mem, pc
+        lw op, inst // Get op
+        lw srcA, 1(inst) // Get srcA
+        lw srcB, 2(inst) // Get srcB
+        lw dest, 3(inst) // Get dest
+        set temp, 1
+        add pc, pc, temp
+       
+********case 0**********************
+        set temp, 0
+        bne op, temp, tag1
+        add srcA, mem, srcA
+        lw srcA, srcA //srcA = M[srcA]
+        add srcB, mem, srcB
+        lw srcB, srcB //srcB = M[srcB]
+
+        sub temp, srcA, srcB
+        add dest, mem, dest
+        sw temp, dest
+        j tagA
+ 
+        
+********case 1**********************
+tag1: set temp, 1
+        bne op, temp, tag2
+        add srcA, mem, srcA
+        lw srcA, srcA //srcA = M[srcA]
+        srl srcA, srcA, 1
+
+        add dest, mem, dest
+        sw srcA, dest //store
+        j tagA
+
+********case 2**********************
+tag2: set temp, 2
+        bne op, temp, tag3
+        add srcA, mem, srcA
+        lw srcA, srcA //srcA = M[srcA]
+        add srcB, mem, srcB
+        lw srcB, srcB //srcB = M[srcB]
+        nor temp, srcA, srcB
+        
+        add dest, mem, dest
+        sw temp, dest //store
+        j tagA
+
+********case 3**********************
+tag3: set temp, 3
+        bne op, temp, tag4
+        add srcA, mem, srcA
+        lw srcA, srcA //srcA = M[srcA]
+
+        add temp, mem, srcA
+        lw srcA, temp //srcA = M[M[srcA]]
+
+        add srcB, mem, srcB
+        lw srcB, srcB //srcB = M[srcB]
+        add dest, mem, dest
+
+        sw dest, srcA // dest = MMsrcA
+        sw srcA, srcB // MMsrcA = MsrcB
+        j tagA
+
+********case 4**********************
+tag4: set temp, 4
+        bne op, temp, tag5
+        add srcA, mem, srcA
+        lw srcA, srcA
+        add temp, mem, dest
+        lw dest, temp //dest = M[dest]
+        IN dest, srcA
+        j tagA
+
+********case 5**********************
+tag5: set temp, 5
+        bne op, temp, tag6
+        add temp, mem, srcA
+        lw srcA, temp
+
+        mul srcB, srcB, INT_SIZE
+        add temp, mem, srcB
+        lw srcB, temp //srcB = M[srcB]
+        OUT srcA, srcB
+        j tagA
+
+********case 6**********************
+tag6: set temp, 6
+       bne op, temp, tag7
+        add temp, mem, srcA
+        lw srcA, temp
+        add temp, mem, srcB
+        lw srcB, temp
+
+        add temp, mem, dest
+        lw dest, temp
+        sw dest, pc
+        set temp, 0
+        slt srcA, srcA, temp
+        beq srcA, temp, tagA
+
+        set pc, srcB
+        j tagA
+
+********case 7**********************
+tag7: QUIT pc
+\end{verbatim}
+
+\section{Fibonacci Implementation}
+
+\begin{verbatim}
+
+% Fibonacci implementation.  "n" is the top of the $sp
+
+:fibo
+    TRAP    6, $1       //put n in $1
+    set     $2, 0        
+    slt     $3, $1, $2  // $3 = if(n < 0)
+    set     $2, 1
+    beq     $2, $3, label1
+
+    set     $2, 3
+    slt     $3, $1, $2  // $3 = if(n < 3)
+    set     $2, 1
+    beq     $2, $3, label2
+    //else if (n=29)
+    set     $2, 29
+    beq     $1, $2, label3
+            
+    set     $4, 1 //$3 is running total
+    sub     $2, $1, $4  // $2 = n-1
+    sub     $3, $2, $4  // $3 = n-2
+    TRAP    5, $2       push n-1
+    TRAP    5, $3       push n-2
+    TRAP    3, fibo     call fibo
+    TRAP    6, $1       $1 = pop
+    TRAP    6, $2       $2 = pop
+    TRAP    5, $1       push temp1
+    TRAP    5, $2       push temp2
+    TRAP    3, fibo     call fibo
+    TRAP    6, $1       pop
+    TRAP    6, $2       pop
+    add     $0, $1, $2  add
+    TRAP    5, $0       push
+    TRAP    4, 0
+
+label1:
+    set     $1, 0
+    set     $2, 1
+    sub     $0, $1, $2  // -1   = b1111111111111111111
+    TRAP    5, $0
+    TRAP    4, 0
+
+label2:  // 1    = b1
+    set     $0, 1
+    TRAP    5, $0
+    TRAP    4, 0
+    
+label3:  // 514229 = b1111101100010110101
+    set     $0, 0
+    set     $1, 111110
+    sl      $1, 13
+    or      $0, $1, $0
+    set     $1, 110001
+    sl      $1, 7
+    or      $0, $1, $0
+    set     $1, 011010
+    sl      $1, 1
+    or      $0, $1, $0
+    set     $1, 1
+    add     $0, $0, $1
+    TRAP    5, $0
+    TRAP    4, 0
+
+label4  // 832030 = b110010 110010 000111 10
+    set     $0, 0
+    set     $1, 110010
+    sl      $1, 14
+    or      $0, $1, $0
+    set     $1, 110010
+    sl      $1, 8
+    or      $0, $1, $0
+    set     $1, 000111
+    sl      $1, 2
+    or      $0, $1, $0
+    set     $1, 2
+    add     $0, $0, $1 
+    TRAP    5, $0
+    TRAP    4, 0
+
+
+label5  // 4807526976 = b100011 110100 011010 000101 001000 000
+    set     $0, 0
+    set     $1, 100011
+    sl      $1, 27
+    or      $0, $1, $0
+    set     $1, 110100
+    sl      $1, 21
+    or      $0, $1, $0
+    set     $1, 011010
+    sl      $1, 15
+    or      $0, $1, $0
+    set     $1, 000101
+    sl      $1, 9
+    or      $0, $1, $0
+    set     $1, 001000
+    sl      $1, 3
+    or      $0, $1, $0
+    TRAP    5, $0
+    TRAP    4, 0
+
+
+
+label6: ;7778742049 =  b111001 111101 001100 010111 100100 001
+    set     $0, 0
+    set     $1, 111001
+    sl      $1, 27
+    or      $0, $1, $0
+    set     $1, 111101
+    sl      $1, 21
+    or      $0, $1, $0
+    set     $1, 001100
+    sl      $1, 15
+    or      $0, $1, $0
+    set     $1, 010111
+    sl      $1, 9
+    or      $0, $1, $0
+    set     $1, 100100
+    sl      $1, 3
+    or      $0, $1, $0
+    set     $1, 1
+    add     $0, $1
+    TRAP    5, $0
+    TRAP    4, 0
+
+\end{verbatim}
+
+
+
+\section{Evaluation of EDP for MIPS and our ISA}
+The general formula for the energy dely product is
+\[EDP = d^2(5+W_I),\]
+where \(d\) is the number if dynamic instructions and \(W_I\) is the number of bits per instructions.
+For MIPS, we have 8 instructions to initialize the system, and for sake of convenience, let's say 10 instructions per execution.  
+Thus, we have about 18 instructions per cycle, let's say 10 cycles, and an instruction length of 32 bits.  So
+\[EDP_{MIPS} = 180^2(37) = 1198800.\]
+
+To initialize the system, (up to case 0) we have 7 instructions.  Each case has between 8 and 14 instructions total (except for the exit case).  
+Thus, each run through the system will have between 15 and 21 instructions.  For ease of use, let's just say 17 (the median value).  If we run our ISA 10 times, we have a total of 170 dynamic instructions for an EDP of:
+\[EDP_{ours} = 170^2(21) = 606900.\]
+
+\section{Analysis of Instructions}
+Since there are only 16 instructions, the following is a description of the entire language (although some details are still to be fleshed out).\\
+
+We have broken our ISA into two different operation types, similar to "R" and "I" type for MIPS. We have "Normal" and "S" type operations.
+\subsection{Normal type operations}
+
+Asembly format: \[opcode\; operand\; operand \;operand\]
+where operand is a register, or an offset, depending on the opcode.
+We have a 4bit op code and 3 bits for each operand
+Thus, there is a possibility for 16 operations, and 8 general registers (the S type operations may access special registers or immediates, depending on the operation).
+
+Operations:
+\begin{enumerate}
+\item
+\begin{verbatim}
+mul $dest, $op1, $op2
+does what you think
+returns lower 34 bits into $dest
+    higher 34 bits goes to TEMP register
+    $dest = lower34($op1 * $op2)
+\end{verbatim}
+\item
+\begin{verbatim}
+add $dest, $op1, $op2
+    does what you think
+    ignore overflow
+    $dest = $op1 + $op2
+
+\end{verbatim}
+\item
+\begin{verbatim}
+sub $dest, $op1, $op2
+    does what you think
+    ignore overflow
+    $dest = $op1 - $op2
+
+\end{verbatim}
+\item
+\begin{verbatim}
+or $dest, $op1, $op2
+    logical or
+
+\end{verbatim}
+\item
+\begin{verbatim}
+nor $dest, $op1, $op2
+~($op1 or $op2)
+
+\end{verbatim}
+\item
+\begin{verbatim}
+sr $dest, $op1, $op2
+    bitwise shift-right
+    $dest = $op1 >> $op2
+
+\end{verbatim}
+\item
+\begin{verbatim}
+lw $value, $base, $offset
+    load word (34 bits).
+    $value = M[$base + $offset]
+
+\end{verbatim}
+\item
+\begin{verbatim}
+sw $value, $base, $offset
+    store word (34 bits)
+    M[$base + $offset] = $value
+
+\end{verbatim}
+\item
+\begin{verbatim}
+bne $op1, $op2, PC_offset
+branch not equal
+if($op1 != $op2):
+PC = PC+InstL+(InstL)*PC_offset
+note: this will be handled by assembler so we can implement label functionality
+
+\end{verbatim}
+\item
+\begin{verbatim}
+beq $op1, $op2, PC_offset
+branch if equal
+if($op1 == $op2):
+PC = PC+InstL+(InstL)*PC_offset
+note: this will be handled by assembler so we can implement label functionality
+
+\end{verbatim}
+\item
+\begin{verbatim}
+slt $dest, $op1, $op2
+    set if less than
+    if($op1 < $op2):
+        $dest = 1
+else:
+$dest = 0
+\end{verbatim}
+\end{enumerate}
+
+
+\subsection{S TYPE}
+Assembly format: \[opcode \;operand1 \;operand2\]
+where opcode is a 4 bit op code, operand1 is 3 bit specifying normal register, and operand2 is a 6 bit special designator.
+\$op will be used to specify a normal register, and \$s will specify a special register
+
+\begin{enumerate}[resume]
+\item
+\begin{verbatim}
+j $op1, $op2
+    jump to PC + instruction length (13 bits) + $op1+$op2 instructions
+    PC = PC+InstL+ InstL*($op1+$op2)
+
+\end{verbatim}
+\item
+\begin{verbatim}
+IN $dest, Ch#
+store into $op from $s (where $s is the channel)
+
+\end{verbatim}
+\item
+\begin{verbatim}
+Out $source, Ch#
+send $op to $s
+
+\end{verbatim}
+\item
+\begin{verbatim}
+QUIT $op1, 0
+        return $op1 and exit program
+
+\end{verbatim}
+\item
+\begin{verbatim}
+set $dest, immediate
+        $dest = 0 | immediate
+\end{verbatim}
+\end{enumerate}
+
+
+\end{document}

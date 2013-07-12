@@ -1,0 +1,572 @@
+%
+% Macros for generating instruction set manuals
+% written for my 2007 PhD thesis, repurposed for general use on internet
+% you may used these macros freely, as long as this notice is not
+% removed from the code. 
+%
+% Copyright (c) 2012, Michael Taylor. All rights reserved.
+%
+% Redistribution and use in source and binary forms, with or without modification, are permitted provided that 
+% the following conditions are met:
+%
+% Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+%
+% Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer
+% in the documentation and/or other materials provided with the distribution.
+%
+% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED
+% WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+% PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY
+% DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+% PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+% HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+% NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+% POSSIBILITY OF SUCH DAMAGE.  
+
+\newcommand{\mbtforloop}[5][1] {\setcounter{#4}{#2}\ifthenelse{ \value{#4}<#3 }{#5\addtocounter{#4}{#1}\mbtforloop[#1]{\value{#4}}{#3}{#4}{#5}}{#5}}
+
+%
+% These commands allow graphical renditions of word formats.
+% There are a couple of variants; some highlight individual bits and nibbles,
+% others don't.
+% MBT: herein is some code for doing numeric manipulation inside latex, e.g., advance=add
+
+\newcounter{mbtx}%
+\newcounter{mbty}%
+
+\newcommand{\mbtwordbitnibblehash}
+{%
+\psset{xunit=0.45cm}\pspolygon[linewidth=0.5pt](32,0)(32,1.2)(0,1.2)(0,0)%
+\mbtforloop{0}{32}{mbtx}{\psset{xunit=0.45cm}\psline[linewidth=0.5pt]{-}(\value{mbtx},0)(\value{mbtx},0.125)}%
+% these are all variants on tick marks for nibble boundaries
+\mbtforloop{1}{7}{mbtx}{\psset{xunit=1.8cm}\psline[linewidth=0.5pt]{-}(\value{mbtx},1.2)(\value{mbtx},1.125)}%
+%\mbtforloop{1}{7}{mbtx}{\psset{xunit=1.8cm}\psline[linewidth=1.5pt]{-}(\value{mbtx},0)(\value{mbtx},-0.125)}%
+%\mbtforloop{1}{7}{mbtx}{\psset{xunit=1.8cm}\psline[linewidth=0.5pt]{-}(\value{mbtx},1.2)(\value{mbtx},1.075)}%
+%{\psset{xunit=0.45cm}\psline[linewidth=.75pt]{-}(0, 1.2)(4, 1.2)}{\psset{xunit=0.45cm}\psline[linewidth=.75pt]{-}(8, 1.2)(12,1.2)}%
+%{\psset{xunit=0.45cm}\psline[linewidth=.75pt]{-}(16,1.2)(20,1.2)}{\psset{xunit=0.45cm}\psline[linewidth=.75pt]{-}(24,1.2)(28,1.2)}%
+}
+
+\newcommand{\mbtwordbithash}
+{%
+\psset{xunit=0.45cm}\pspolygon[linewidth=0.5pt](32,0)(32,1.2)(0,1.2)(0,0)%
+\mbtforloop{0}{32}{mbtx}{\psset{xunit=0.45cm}\psline[linewidth=0.5pt]{-}(\value{mbtx},0)(\value{mbtx},0.125)}%
+}
+
+\newcommand{\mbtwordnohash}
+{%
+\psset{xunit=0.45cm}\pspolygon[linewidth=0.5pt](32,0)(32,1.2)(0,1.2)(0,0)%
+}
+
+% base routine for word field
+\newcommand{\mbtwordfieldbase}[3]{%
+{\psset{xunit=0.45cm}\value{mbtx}=-#1\advance\value{mbtx} by 31\psline[linewidth=0.5pt]{-}(\value{mbtx},0)(\value{mbtx},1.2)}%
+{\psset{xunit=0.45cm}\value{mbtx}=-#2\advance\value{mbtx} by 32\psline[linewidth=0.5pt]{-}(\value{mbtx},0)(\value{mbtx},1.2)}%
+{\psset{xunit=0.05625cm}\value{mbtx}=-#1\multiply\value{mbtx} by 8\advance\value{mbtx} by 253\rput[t]{0}(\value{mbtx},-0.10){\footnotesize #1}}%
+{\psset{xunit=0.05625cm}\value{mbtx}=-#2\multiply\value{mbtx} by 8\advance\value{mbtx} by 251\rput[t]{0}(\value{mbtx},-0.10){\footnotesize #2}}%
+{\psset{xunit=0.225cm}\value{mbtx}=-#1\advance\value{mbtx} by -#2\advance\value{mbtx} by 63\rput[b]{0}(\value{mbtx},1.30){\footnotesize #3}}%
+}
+
+
+\newcommand{\mbtwordfield}[4]{%
+{\mbtwordfieldbase{#1}{#2}{#3}}%
+{\psset{xunit=0.225cm}\value{mbtx}=-#1\advance\value{mbtx} by -#2\advance\value{mbtx} by 63\rput[B]{0}(\value{mbtx},.55){#4}}%
+}
+
+% no hash version
+\newcommand{\mbtwordfieldnoh}[4]{%
+{\mbtwordfieldbase{#1}{#2}{#3}}%
+{\psset{xunit=0.225cm}\value{mbtx}=-#1\advance\value{mbtx} by -#2\advance\value{mbtx} by 63\rput[B]{0}(\value{mbtx},.45){#4}}%
+}
+
+% no hash version
+\newcommand{\mbtwordfieldnohtwo}[5]{%
+{\mbtwordfieldbase{#1}{#2}{#3}}%
+{\psset{xunit=0.225cm}\value{mbtx}=-#1\advance\value{mbtx} by -#2\advance\value{mbtx} by 63\rput[B]{0}(\value{mbtx},.75){#4}}%
+{\psset{xunit=0.225cm}\value{mbtx}=-#1\advance\value{mbtx} by -#2\advance\value{mbtx} by 63\rput[B]{0}(\value{mbtx},.25){#5}}%
+}
+
+
+% a single bit base routine
+\newcommand{\mbtwordbitbase}[1]{%
+{\psset{xunit=0.45cm}\value{mbtx}=-#1\advance\value{mbtx} by 31\psline[linewidth=0.5pt]{-}(\value{mbtx},0)(\value{mbtx},1.2)}%
+{\psset{xunit=0.45cm}\value{mbtx}=-#1\advance\value{mbtx} by 32\psline[linewidth=0.5pt]{-}(\value{mbtx},0)(\value{mbtx},1.2)}%
+{\psset{xunit=0.05625cm}\value{mbtx}=-#1\multiply\value{mbtx} by 8\advance\value{mbtx} by 252\rput[t]{0}(\value{mbtx},-0.10){\footnotesize #1}}%
+{\psset{xunit=0.225cm}\value{mbtx}=-#1\advance\value{mbtx} by -#1\advance\value{mbtx} by 63\rput[b]{0}(\value{mbtx},1.30){\footnotesize 1}}%
+}
+
+% a single bit 
+\newcommand{\mbtwordbit}[2]{%
+{\mbtwordbitbase{#1}}%
+{\psset{xunit=0.225cm}\value{mbtx}=-#1\advance\value{mbtx} by -#1\advance\value{mbtx} by 63\rput[B]{0}(\value{mbtx},.55){#2}}%
+}
+
+% no hash version
+\newcommand{\mbtwordbitnoh}[2]{%
+{\mbtwordbitbase{#1}}%
+{\psset{xunit=0.225cm}\value{mbtx}=-#1\advance\value{mbtx} by -#1\advance\value{mbtx} by 63\rput[B]{0}(\value{mbtx},.45){#2}}%
+}
+
+
+% an X
+\newcommand{\mbtwordfieldX}[3]{%
+{\mbtwordfieldbase{#1}{#2}{#3}}%
+{\psset{xunit=0.45cm}\value{mbtx}=-#1\advance\value{mbtx} by 31\value{mbty}=-#2\advance\value{mbty} by 32%
+ \psline[linewidth=0.5pt]{-}(\value{mbtx},0)(\value{mbty},1.2)%
+ \psline[linewidth=0.5pt]{-}(\value{mbty},0)(\value{mbtx},1.2)}%
+}
+
+% grayout
+\newcommand{\mbtwordfieldgray}[3]{%
+{\mbtwordfieldbase{#1}{#2}{#3}}%
+% draw gray box
+{\psset{xunit=0.45cm}\value{mbtx}=-#1\advance\value{mbtx} by 31\value{mbty}=-#2\advance\value{mbty} by 32%
+\psframe*[linecolor=lightgray, fillstyle=solid, fillcolor=lightgray](\value{mbtx},0)(\value{mbty},1.2)}%
+}
+
+\newcommand{\mbtinstrtiming}[2]{%
+\hspace{-6mm}\pspicture*(-.2,0)(1,1.76)%
+\pscircle[linewidth=.5pt](.256,.6){.3}%
+%\pscircle[linewidth=.5pt](.256,1.38){.3}%
+\pspolygon[linewidth=.5pt](.106,1.66)(.406,1.66)(.656,1.36)(.406,1.06)(.106,1.06)(-.144,1.36)
+\rput[B]{0}(0.25,0.50){#1}\rput[B]{0}(0.25,1.25){#2}%
+\endpspicture%
+}
+
+\newcommand{\mbtinstrtimingsingle}[1]{%
+\hspace{-6mm}\pspicture*(-.2,0)(1,1.75)%
+\pscircle[linewidth=.5pt](.256,.95){.3}%
+\rput[B]{0}(0.25,0.85){#1}%
+\endpspicture%
+}
+
+% shows overfull hboxes
+%\overfullrule=5pt
+
+% takes mneumonic, description, 823
+\newcommand{\rawinstrbanner}[3]
+{\let\curInstr\nextInstr\renewcommand{\nextInstr}{#1}%
+
+\begin{minipage}{6.05in}
+\psline[linewidth=0.5pt]{-}(-10mm,-2mm)(6in,-2mm)%
+\hspace{-10mm}\parbox[t]{1.35in}{\bf\LARGE #1}\parbox[t]{4.58in}{#2}
+\parbox[t]{0.35in}{{\bf{#3}}}
+\vspace{5mm}
+}
+
+\newcommand{\rawpseudo}[6] 
+{
+\rawinstrbanner{#1}{#2}{#4}
+
+\mbtinstrtimingsingle{#3} 
+
+\vspace{-15mm}\hspace{9mm} #5 
+
+\hspace{9mm} #6
+\vspace{5mm}
+
+}
+
+\newcommand{\rawpseudosingle}[5] 
+{
+\rawinstrbanner{#1}{#2}{#4}
+
+\mbtinstrtimingsingle{#3} 
+
+\vspace{-13mm}\hspace{9mm} #5 
+
+\vspace{5mm}
+
+}
+
+
+\newcommand{\rawSMnemOpRsRtImm}[6]{%
+\pspicture*(-.2,-.4)(14.5,1.5)%
+\mbtwordnohash%
+\mbtwordbitnoh{31}{#1}%
+\mbtwordfieldnohtwo{30}{26}{5}{\rawinstr{#2}}{#3}%
+\mbtwordfieldnoh{25}{21}{5}{#4}%
+\mbtwordfieldnoh{20}{16}{5}{#5}%
+\mbtwordfieldnoh{15}{0}{16}{#6}%
+\endpspicture%
+}
+
+% mbt: spacing is really weird; leave the spaces and comments as they are
+% mneumonic opcode text occupacy latency 823 rs rt imm
+\newcommand{\rawimminstrbase}[9]
+{%
+\rawinstrbanner{#1}{#3}{#6}
+
+\mbtinstrtiming{#4}{#5}%
+\rawSMnemOpRsRtImm{s}{#1}{#2}{#7}{#8}{#9}%
+
+}
+%
+
+% mbt: spacing is really weird; leave the spaces and comments as they are
+% mneumonic opcode text occupacy latency 823 rs rt imm
+\newcommand{\rawimminstrbaseSzero}[9]
+{%
+\rawinstrbanner{#1}{#3}{#6}
+
+\mbtinstrtiming{#4}{#5}%
+\rawSMnemOpRsRtImm{0}{#1}{#2}{#7}{#8}{#9}%
+
+}
+%
+
+% mbt: spacing is really weird; leave the spaces and comments as they are
+% mneumonic opcode text occupacy 823 sbit rs rt imm
+\newcommand{\rawimminstrbasenolatency}[9]
+{%
+\rawinstrbanner{#1}{#3}{#5}
+
+\mbtinstrtimingsingle{#4}%
+\rawSMnemOpRsRtImm{#6}{#1}{#2}{#7}{#8}{#9}%
+
+}
+%
+
+\newcommand{\rawuimminstr}[6]{\rawimminstrbase{#1}{#2}{#3}{#4}{#5}{#6}{rs}{rt}{uimm16}}
+\newcommand{\rawuimminstrnolatency}[5]{\rawimminstrbasenolatency{#1}{#2}{#3}{#4}{#5}{s}{rs}{rt}{uimm16}}
+\newcommand{\rawsimminstrnolatency}[5]{\rawimminstrbasenolatency{#1}{#2}{#3}{#4}{#5}{s}{rs}{rt}{simm16}}
+\newcommand{\rawBEQBNE}[5]{\rawimminstrbasenolatency{#1}{#2}{#3}{#4}{#5}{p}{rs}{rt}{boffs16}}
+\newcommand{\rawJEQJNE}[5]{\rawimminstrbasenolatency{#1}{#2}{#3}{#4}{#5}{p}{rs}{rt}{targ16}}
+\newcommand{\rawsimminstr}[6]{\rawimminstrbase{#1}{#2}{#3}{#4}{#5}{#6}{rs}{rt}{simm16}}
+\newcommand{\rawldinstr}[6]{\rawimminstrbase{#1}{#2}{#3}{#4}{#5}{#6}{base}{rt}{soffs16}}
+\newcommand{\rawstinstr}[5]{\rawimminstrbasenolatency{#1}{#2}{#3}{#4}{#5}{0}{base}{rt}{soffs16}}
+
+% mneum opcode s rs rt rd fmt basemneum baseop
+\newcommand{\rawRRRstandardbase}[9]
+{%
+\pspicture*(-.2,-.4)(14.5,1.5)%
+\mbtwordnohash%
+\mbtwordbitnoh{31}{#3}%
+\mbtwordfieldnohtwo{30}{26}{5}{\rawinstr{#8}}{#9}%
+\mbtwordfieldnoh{25}{21}{5}{#4}%
+\mbtwordfieldnoh{20}{16}{5}{#5}%
+\mbtwordfieldnoh{15}{11}{5}{#6}%
+\mbtwordfieldnoh{10}{6}{5}{#7}%
+\mbtwordfieldnohtwo{5}{0}{6}{\rawinstr{#1}}{#2}%
+\endpspicture%
+}
+
+\newcommand{\rawRRRstandard}[7]
+{%
+\rawRRRstandardbase{#1}{#2}{#3}{#4}{#5}{#6}{#7}{SPECIAL}{0 0 0 0 0}%
+}
+
+\newcommand{\rawMAGIC}[5]
+{%
+\rawinstrbanner{#1}{#3}{#5}%
+
+\mbtinstrtimingsingle{#4}%
+\pspicture*(-.2,-.4)(14.5,1.5)%
+\mbtwordnohash%
+\mbtwordbitnoh{31}{s}%
+\mbtwordfieldnohtwo{30}{26}{5}{\rawinstr{SPECIAL}}{0 0 0 0 0}%
+\mbtwordfieldnoh{25}{21}{5}{rs}%
+\mbtwordfieldnoh{20}{16}{5}{rt}%
+\mbtwordfieldnoh{15}{6}{10}{code}%
+\mbtwordfieldnohtwo{5}{0}{6}{\rawinstr{#1}}{#2}%
+\endpspicture%
+}
+
+% mnem op descr timing 823 (SA|rd)
+\newcommand{\rawRLM}[6]
+{%
+\rawinstrbanner{#1}{#3}{#5}%
+
+\mbtinstrtimingsingle{#4}%
+\pspicture*(-.2,-.4)(14.5,1.5)%
+\mbtwordnohash%
+\mbtwordfieldnohtwo{31}{26}{6}{\rawinstr{#1}}{#2}%
+\mbtwordfieldnoh{25}{21}{5}{rs}%
+\mbtwordfieldnoh{20}{16}{5}{rt}%
+\mbtwordfieldnoh{15}{11}{5}{#6}%
+\mbtwordfieldnoh{10}{6}{5}{mb}%
+\mbtwordfieldnoh{5}{1}{5}{me}%
+\mbtwordfieldnoh{0}{0}{1}{z}%
+\endpspicture%
+}
+
+\newcommand{\rawRRRinstrbase}[8]
+{%
+\rawinstrbanner{#1}{#3}{#5}%
+
+\mbtinstrtimingsingle{#4}%
+\rawRRRstandard{#1}{#2}{s}{#6}{#7}{#8}{0 0 0 0 0}%
+
+}
+%
+
+\newcommand{\rawCOMMbase}[8]
+{%
+\rawinstrbanner{#1}{#3}{#5}%
+
+\mbtinstrtimingsingle{#4}%
+\rawRRRstandardbase{#1}{#2}{0}{#6}{#7}{#8}{0 0 0 0 0}{COMM}{0 1 0 1 1 }%
+
+}
+%
+
+\newcommand{\rawCOMMbaseAlt}[8]
+{%
+\rawinstrbanner{#1}{#3}{#5}%
+
+\mbtinstrtimingsingle{#4}%
+\rawRRRstandardbase{#1}{#2}{0}{#6}{#7}{#8}{0 0 0 0 1}{COMM}{0 1 0 1 1 }%
+
+}
+%
+
+\newcommand{\rawCOMMcache}[8]
+{%
+\rawinstrbanner{#1}{#3}{#5}%
+
+\mbtinstrtimingsingle{#4}%
+\rawRRRstandardbase{#1}{#2}{0}{#6}{#7}{#8}{S A A A A}{COMM}{0 1 0 1 1 }%
+
+}
+%
+
+\newcommand{\rawCOMMcacheLat}[8]
+{%
+\rawinstrbanner{#1}{#3}{#5}%
+
+\mbtinstrtiming{1}{#4}%
+\rawRRRstandardbase{#1}{#2}{0}{#6}{#7}{#8}{S A A A A}{COMM}{0 1 0 1 1 }%
+
+}
+%
+
+\newcommand{\rawCOMMzzz}[5] {\rawCOMMbase{#1}{#2}{#3}{#4}{#5}{0 0 0 0 0}{0 0 0 0 0}{0 0 0 0 0}}
+
+\newcommand{\rawRRRinstrbaseSZero}[8]
+{%
+\rawinstrbanner{#1}{#3}{#5}%
+
+\mbtinstrtimingsingle{#4}%
+\rawRRRstandard{#1}{#2}{0}{#6}{#7}{#8}{0 0 0 0 0}%
+
+}
+%
+
+\newcommand{\rawRRRinstrbaseLat}[9]
+{%
+\rawinstrbanner{#1}{#3}{#6}%
+
+\mbtinstrtiming{#4}{#5}%
+\rawRRRstandard{#1}{#2}{s}{#7}{#8}{#9}{0 0 0 0 0}%
+
+}
+%
+
+\newcommand{\rawRRRinstrbaseLatSZero}[9]
+{%
+\rawinstrbanner{#1}{#3}{#6}%
+
+\mbtinstrtiming{#4}{#5}%
+\rawRRRstandard{#1}{#2}{0}{#7}{#8}{#9}{0 0 0 0 0}%
+
+}
+%
+
+% mneumonic encoding text-descr latency 823 rt rd fmt
+\newcommand{\rawRRRFloat}[8]
+{%
+\rawinstrbanner{#1}{#3}{#5}%
+
+\mbtinstrtiming{1}{#4}%
+\rawRRRstandardbase{#1}{#2}{s}{rs}{#6}{#7}{#8}{FPU}{0 0 1 1 0}%
+
+}
+%
+
+
+% mneumonic encoding  text-descr  occupancy   823
+\newcommand{\rawREGIMMinstrbase}[9]
+{%
+\rawinstrbanner{#1}{#3}{#5}
+
+\mbtinstrtimingsingle{#4}%
+\pspicture*(-.2,-.4)(14.5,1.5)%
+\mbtwordnohash%
+\mbtwordbitnoh{31}{p}%
+\mbtwordfieldnohtwo{30}{26}{5}{\rawinstr{#6}}{#7}%
+\mbtwordfieldnoh{25}{21}{5}{#9}%
+\mbtwordfieldnohtwo{20}{16}{5}{\rawinstr{#1}}{#2}%
+\mbtwordfieldnoh{15}{0}{16}{#8}%
+\endpspicture%
+
+}
+%
+\newcommand{\rawREGIMMinstr}[5]{\rawREGIMMinstrbase{#1}{#2}{#3}{#4}{#5}{REGIMM}{1 1 0 0 0}{boffs16}{rs}}
+\newcommand{\rawREGIMMjmpinstr}[5]{\rawREGIMMinstrbase{#1}{#2}{#3}{#4}{#5}{REGIMM}{1 1 0 0 0}{targ16}{rs}}
+\newcommand{\rawREGIMMjmpuncondinstr}[5]{\rawREGIMMinstrbase{#1}{#2}{#3}{#4}{#5}{REGIMM}{1 1 0 0 0}{targ16}{0 0 0 0 0}}
+
+
+\newcommand{\rawRZeroRinstr}[5]{\rawRRRinstrbase{#1}{#2}{#3}{#4}{#5}{rs}{0 0 0 0 0}{rd}}
+\newcommand{\rawRZeroZeroinstr}[5]{\rawRRRinstrbaseSZero{#1}{#2}{#3}{#4}{#5}{rs}{0 0 0 0 0}{0 0 0 0 0}}
+\newcommand{\rawZeroZeroRinstr}[5]{\rawRRRinstrbase{#1}{#2}{#3}{#4}{#5}{0 0 0 0 0}{0 0 0 0 0}{rd}}
+\newcommand{\rawZeroZeroZeroinstr}[5]{\rawRRRinstrbase{#1}{#2}{#3}{#4}{#5}{0 0 0 0 0}{0 0 0 0 0}{0 0 0 0 0}}
+\newcommand{\rawRRRinstr}[5]{\rawRRRinstrbase{#1}{#2}{#3}{#4}{#5}{rs}{rt}{rd}}
+\newcommand{\rawRRRinstrsa}[5]{\rawRRRinstrbase{#1}{#2}{#3}{#4}{#5}{rs}{rt}{sa}}
+\newcommand{\rawRRRinstrLat}[6]{\rawRRRinstrbaseLat{#1}{#2}{#3}{#4}{#5}{#6}{rs}{rt}{rd}}
+\newcommand{\rawDIVinstr}[6]{\rawRRRinstrbaseLatSZero{#1}{#2}{#3}{#4}{#5}{#6}{rs}{rt}{0 0 0 0 0}}
+\newcommand{\rawBLinstr}[5]
+{%
+\rawinstrbanner{#1}{#3}{#5}
+
+\mbtinstrtimingsingle{#4}%
+\pspicture*(-.2,-.4)(14.5,1.5)%
+\mbtwordnohash%
+\mbtwordbitnoh{31}{1}%
+\mbtwordfieldnohtwo{30}{26}{5}{\rawinstr{#1}}{#2}%
+\mbtwordfieldnoh{25}{0}{26}{boffs26}
+\endpspicture%
+
+}
+%
+% End word format.
+%
+%
+%
+
+
+% Table stuff, for adding more space between lines 
+% and text.
+%
+%
+
+\newlength{\myVSpaceIS}% the height of the box
+\setlength{\myVSpaceIS}{1.8ex}% the default, 
+\newcommand\mbttop{\raisebox{-0\myVSpaceIS}% asymmetric behaviour, normally .5
+  {\rule{0pt}{\myVSpaceIS}}%
+}
+\newcommand\mbtbot{\raisebox{-.5\myVSpaceIS}% asymmetric behaviour, normally .5
+  {\rule{0pt}{\myVSpaceIS}}%
+}
+
+\newlength{\myVSpaceA}% the height of the box
+\newlength{\myVSpaceB}% the height of the box
+\setlength{\myVSpaceA}{3.0ex}% the default, 
+\setlength{\myVSpaceB}{4.0ex}% the default, 
+\newcommand\mbttopa{\raisebox{-0\myVSpaceA}% asymmetric behaviour, normally .5
+  {\rule{0pt}{\myVSpaceA}}%
+}
+\newcommand\mbttopb{\raisebox{-0\myVSpaceB}% asymmetric behaviour, normally .5
+  {\rule{0pt}{\myVSpaceB}}%
+}
+\newcommand\mbtbotb{\raisebox{-.5\myVSpaceB}% asymmetric behaviour, normally .5
+  {\rule{0pt}{\myVSpaceB}}%
+}
+
+\newcommand\mbtbota{\raisebox{-.5\myVSpaceA}% asymmetric behaviour, normally .5
+  {\rule{0pt}{\myVSpaceA}}%
+}
+
+% these are specifically for putting spaces in singled-spaced 
+% tables below and above \hlines.
+
+\newlength{\myVSpaceTA}% the height of the box
+\setlength{\myVSpaceTA}{2.4ex}%
+%\setlength{\myVSpaceTA}{2.0ex}%
+
+\newcommand\zT{\raisebox{-0\myVSpaceTA}% asymmetric behaviour, normally .5
+  {\rule{0pt}{\myVSpaceTA}}%
+}
+\newcommand\zB{\raisebox{-.5\myVSpaceTA}% asymmetric behaviour, normally .5
+  {\rule{0pt}{\myVSpaceTA}}%
+}
+
+%\newcommand{\QTM}{QTM}
+%\newcommand{\QTMx}{QTM~}
+%\newcommand{\Quintessential}{Quintessential}
+%\newcommand{\Quintessentialx}{Quintessential~}
+
+\newcommand{\QTM}{ATM}
+\newcommand{\QTMx}{ATM~}
+\newcommand{\Quintessential}{Archetypal}
+\newcommand{\Quintessentialx}{Archetypal~}
+
+\newcommand{\csto}{\texttt{\$csto}}
+\newcommand{\cgno}{\texttt{\$cgno}}
+\newcommand{\cmno}{\texttt{\$cmno}}
+\newcommand{\csti}{\texttt{\$csti}}
+\newcommand{\cstii}{\texttt{\$csti2}}
+\newcommand{\cgni}{\texttt{\$cgni}}
+\newcommand{\cmni}{\texttt{\$cmni}}
+
+\newcommand{\cNi}{\texttt{\$cNi}}
+\newcommand{\cEi}{\texttt{\$cEi}}
+\newcommand{\cSi}{\texttt{\$cSi}}
+\newcommand{\cWi}{\texttt{\$cWi}}
+
+\newcommand{\cNo}{\texttt{\$cNo}}
+\newcommand{\cEo}{\texttt{\$cEo}}
+\newcommand{\cSo}{\texttt{\$cSo}}
+\newcommand{\cWo}{\texttt{\$cWo}}
+
+\newcommand{\rawreg}[1]{\texttt{\${#1}}}
+\newcommand{\rawinstr}[1]{\texttt{{#1}}}
+\newcommand{\rawcode}[1]{\texttt{{#1}}}
+
+\newcommand{\rawnib}[1]{\textsf{{#1}}}
+
+\newcommand{\rawmodule}[1]{\textsf{{#1}}}
+
+
+% alpha, roman, arabic
+%
+
+\newcommand{\fiveB}{\begin{list}{\arabic{Lcount}:}{\usecounter{Lcount}}}
+\newcommand{\fiveE}{\end{list}}
+
+\newcommand{\sixB}{\begin{list}{\alph{Lcount2}.}{\usecounter{Lcount2}}}
+\newcommand{\sixE}{\end{list}}
+
+\newcommand{\bullB}{\begin{itemize}}
+\newcommand{\bullE}{\end{itemize}}
+
+% make it so subsubsection show numbers
+\setcounter{secnumdepth}{3}
+
+% must be terminated with end verbatim command
+\newcommand{\deepbegin}[1]{\vspace{-5mm} \\ \begin{verbatim}\hspace{10mm}#1}
+\newcommand{\deepitem}[1]{\vspace{-5mm} \\ \hspace{10mm}#1}
+
+
+
+%\newcommand{\mypar}[1]{\vspace{.1in}\noindent{\bf {#1}} \hspace{.04in}}
+\newcommand{\figurefont}{}
+\newcommand{\titlestretch}{\setstretch{1.0}}
+\newcommand{\standardstretch}{\setstretch{1.5}}
+\newcommand{\abstractstretch}{\setstretch{1.4}}
+\newcommand{\captionstretch}{\setstretch{1.0}}
+\newcommand{\tablestretch}{\setstretch{1.0}}
+\newcommand{\codestretch}{\setstretch{1.0}}
+\newcommand{\headerstretch}{\setstretch{1.0}}
+\newcommand{\liststretch}{\setstretch{1.0}}
+\newcounter{Lcount}
+\newcounter{Lcount2}
+
+%\include{son-section/son-macros}
+\newsavebox{\fmbox}
+\newenvironment{fmpage}[1]
+{\begin{lrbox}{\fmbox}\begin{minipage}{#1}}
+{\end{minipage}\end{lrbox}\fbox{\scalebox{1.0}{\usebox{\fmbox}}}}
+
+%\input{mitthesis2}
+%\begin{document}
+%\include{cover}
+%\thesisabstract{
+%\input{abstract}
+%}
+
+%\newpage
+%\singlespacing
+%\tableofcontents
+%\newpage
+%\setstretch{1.5}
+
+%\setstretch{1.0}

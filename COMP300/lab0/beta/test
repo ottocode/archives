@@ -1,0 +1,726 @@
+line is: endline
+line is: fibo: TRAP POP, $1endline
+fibo:
+TRAP
+POP
+$1
+line is: set $2, 0endline
+set
+$2
+0
+arg: $2
+arg: 0
+line is: slt $3, $1, $2endline
+slt
+$3
+$1
+$2
+arg: $3
+arg: $1
+arg: $2
+line is: set $2, 1endline
+set
+$2
+1
+arg: $2
+arg: 1
+line is: beq $2, $3, label1:endline
+beq
+$2
+$3
+label1:
+arg: $2
+arg: $3
+arg: label1:
+line is: endline
+line is: set $2, 3endline
+set
+$2
+3
+arg: $2
+arg: 3
+line is: slt $3, $1, $2endline
+slt
+$3
+$1
+$2
+arg: $3
+arg: $1
+arg: $2
+line is: set $2, 1endline
+set
+$2
+1
+arg: $2
+arg: 1
+line is: beq $2, $3, label2:endline
+beq
+$2
+$3
+label2:
+arg: $2
+arg: $3
+arg: label2:
+line is: set $2, 29endline
+set
+$2
+29
+arg: $2
+arg: 29
+line is: beq $1, $2, label3:endline
+beq
+$1
+$2
+label3:
+arg: $1
+arg: $2
+arg: label3:
+line is: endline
+line is: set $4, 1endline
+set
+$4
+1
+arg: $4
+arg: 1
+line is: sub $2, $1, $4endline
+sub
+$2
+$1
+$4
+arg: $2
+arg: $1
+arg: $4
+line is: sub $3, $2, $4endline
+sub
+$3
+$2
+$4
+arg: $3
+arg: $2
+arg: $4
+line is: TRAP PUSH, $2endline
+TRAP
+PUSH
+$2
+arg: PUSH
+arg: $2
+line is: TRAP PUSH, $3endline
+TRAP
+PUSH
+$3
+arg: PUSH
+arg: $3
+line is: TRAP CALL, fibo:endline
+TRAP
+CALL
+fibo:
+arg: CALL
+arg: fibo:
+line is: TRAP POP, $1endline
+TRAP
+POP
+$1
+arg: POP
+arg: $1
+line is: TRAP POP, $2endline
+TRAP
+POP
+$2
+arg: POP
+arg: $2
+line is: TRAP PUSH, $1endline
+TRAP
+PUSH
+$1
+arg: PUSH
+arg: $1
+line is: TRAP PUSH, $2endline
+TRAP
+PUSH
+$2
+arg: PUSH
+arg: $2
+line is: TRAP CALL, fibo:endline
+TRAP
+CALL
+fibo:
+arg: CALL
+arg: fibo:
+line is: TRAP POP, $1endline
+TRAP
+POP
+$1
+arg: POP
+arg: $1
+line is: TRAP POP, $2endline
+TRAP
+POP
+$2
+arg: POP
+arg: $2
+line is: add $0, $1, $2endline
+add
+$0
+$1
+$2
+arg: $0
+arg: $1
+arg: $2
+line is: TRAP PUSH, $0endline
+TRAP
+PUSH
+$0
+arg: PUSH
+arg: $0
+line is: TRAP RET, 0endline
+TRAP
+RET
+0
+arg: RET
+arg: 0
+line is: endline
+line is: label1: set $1, 0endline
+label1:
+set
+$1
+0
+line is: set $2, 1endline
+set
+$2
+1
+arg: $2
+arg: 1
+line is: sub $0, $1, $2 // -1 = b1111111111111111111endline
+sub
+$0
+$1
+$2
+arg: $0
+arg: $1
+arg: $2
+line is: TRAP PUSH, $0endline
+TRAP
+PUSH
+$0
+arg: PUSH
+arg: $0
+line is: TRAP RET, $0endline
+TRAP
+RET
+$0
+arg: RET
+arg: $0
+line is: endline
+line is: label2: set $0, 1endline
+label2:
+set
+$0
+1
+line is: TRAP PUSH, $0endline
+TRAP
+PUSH
+$0
+arg: PUSH
+arg: $0
+line is: TRAP RET, $0endline
+TRAP
+RET
+$0
+arg: RET
+arg: $0
+line is: endline
+line is: label3: set $0, 0endline
+label3:
+set
+$0
+0
+line is: set $1, 62endline
+set
+$1
+62
+arg: $1
+arg: 62
+line is: sl $1, 13endline
+sl
+$1
+13
+arg: $1
+arg: 13
+line is: or $0, $1, $0endline
+or
+$0
+$1
+$0
+arg: $0
+arg: $1
+arg: $0
+line is: set $1, 49endline
+set
+$1
+49
+arg: $1
+arg: 49
+line is: sl $1, 7endline
+sl
+$1
+7
+arg: $1
+arg: 7
+line is: or $0, $1, $0endline
+or
+$0
+$1
+$0
+arg: $0
+arg: $1
+arg: $0
+line is: set $1, 26endline
+set
+$1
+26
+arg: $1
+arg: 26
+line is: sl $1, 1endline
+sl
+$1
+1
+arg: $1
+arg: 1
+line is: or $0, $1, $0endline
+or
+$0
+$1
+$0
+arg: $0
+arg: $1
+arg: $0
+line is: set $1, 1endline
+set
+$1
+1
+arg: $1
+arg: 1
+line is: add $0, $0, $1endline
+add
+$0
+$0
+$1
+arg: $0
+arg: $0
+arg: $1
+line is: TRAP PUSH, $0endline
+TRAP
+PUSH
+$0
+arg: PUSH
+arg: $0
+line is: TRAP RET, 0endline
+TRAP
+RET
+0
+arg: RET
+arg: 0
+line is: endline
+line is: label4: set $0, 0endline
+label4:
+set
+$0
+0
+line is: set $1, 50endline
+set
+$1
+50
+arg: $1
+arg: 50
+line is: sl $1, 14endline
+sl
+$1
+14
+arg: $1
+arg: 14
+line is: or $0, $1, $0endline
+or
+$0
+$1
+$0
+arg: $0
+arg: $1
+arg: $0
+line is: set $1, 50endline
+set
+$1
+50
+arg: $1
+arg: 50
+line is: sl $1, 8endline
+sl
+$1
+8
+arg: $1
+arg: 8
+line is: or $0, $1, $0endline
+or
+$0
+$1
+$0
+arg: $0
+arg: $1
+arg: $0
+line is: set $1, 5endline
+set
+$1
+5
+arg: $1
+arg: 5
+line is: sl $1, 2endline
+sl
+$1
+2
+arg: $1
+arg: 2
+line is: or $0, $1, $0endline
+or
+$0
+$1
+$0
+arg: $0
+arg: $1
+arg: $0
+line is: set $1, 2endline
+set
+$1
+2
+arg: $1
+arg: 2
+line is: add $0, $0, $1endline
+add
+$0
+$0
+$1
+arg: $0
+arg: $0
+arg: $1
+line is: TRAP PUSH, $0endline
+TRAP
+PUSH
+$0
+arg: PUSH
+arg: $0
+line is: TRAP RET, 0endline
+TRAP
+RET
+0
+arg: RET
+arg: 0
+line is: endline
+line is: endline
+line is: labelPUSH: set $0, 0endline
+labelPUSH:
+set
+$0
+0
+line is: set $1, 35endline
+set
+$1
+35
+arg: $1
+arg: 35
+line is: sl $1, 27endline
+sl
+$1
+27
+arg: $1
+arg: 27
+line is: or $0, $1, $0endline
+or
+$0
+$1
+$0
+arg: $0
+arg: $1
+arg: $0
+line is: set $1, 52endline
+set
+$1
+52
+arg: $1
+arg: 52
+line is: sl $1, 21endline
+sl
+$1
+21
+arg: $1
+arg: 21
+line is: or $0, $1, $0endline
+or
+$0
+$1
+$0
+arg: $0
+arg: $1
+arg: $0
+line is: set $1, 26endline
+set
+$1
+26
+arg: $1
+arg: 26
+line is: sl $1, 1endline
+sl
+$1
+1
+arg: $1
+arg: 1
+line is: or $0, $1, $0endline
+or
+$0
+$1
+$0
+arg: $0
+arg: $1
+arg: $0
+line is: set $1, 5endline
+set
+$1
+5
+arg: $1
+arg: 5
+line is: sl $1, 9endline
+sl
+$1
+9
+arg: $1
+arg: 9
+line is: or $0, $1, $0endline
+or
+$0
+$1
+$0
+arg: $0
+arg: $1
+arg: $0
+line is: set $1, 8endline
+set
+$1
+8
+arg: $1
+arg: 8
+line is: sl $1, 3endline
+sl
+$1
+3
+arg: $1
+arg: 3
+line is: or $0, $1, $0endline
+or
+$0
+$1
+$0
+arg: $0
+arg: $1
+arg: $0
+line is: TRAP PUSH, $0endline
+TRAP
+PUSH
+$0
+arg: PUSH
+arg: $0
+line is: TRAP RET, 0endline
+TRAP
+RET
+0
+arg: RET
+arg: 0
+line is: endline
+line is: endline
+line is: endline
+line is: labelPOP: set $0, 0endline
+labelPOP:
+set
+$0
+0
+line is: set $1, 57endline
+set
+$1
+57
+arg: $1
+arg: 57
+line is: sl $1, 27endline
+sl
+$1
+27
+arg: $1
+arg: 27
+line is: or $0, $1, $0endline
+or
+$0
+$1
+$0
+arg: $0
+arg: $1
+arg: $0
+line is: set $1, 57endline
+set
+$1
+57
+arg: $1
+arg: 57
+line is: sl $1, 21endline
+sl
+$1
+21
+arg: $1
+arg: 21
+line is: or $0, $1, $0endline
+or
+$0
+$1
+$0
+arg: $0
+arg: $1
+arg: $0
+line is: set $1, 12endline
+set
+$1
+12
+arg: $1
+arg: 12
+line is: sl $1, 1endline
+sl
+$1
+1
+arg: $1
+arg: 1
+line is: or $0, $1, $0endline
+or
+$0
+$1
+$0
+arg: $0
+arg: $1
+arg: $0
+line is: set $1, 23endline
+set
+$1
+23
+arg: $1
+arg: 23
+line is: sl $1, 9endline
+sl
+$1
+9
+arg: $1
+arg: 9
+line is: or $0, $1, $0endline
+or
+$0
+$1
+$0
+arg: $0
+arg: $1
+arg: $0
+line is: set $1, 36endline
+set
+$1
+36
+arg: $1
+arg: 36
+line is: sl $1, 3endline
+sl
+$1
+3
+arg: $1
+arg: 3
+line is: or $0, $1, $0endline
+or
+$0
+$1
+$0
+arg: $0
+arg: $1
+arg: $0
+line is: set $1, 1endline
+set
+$1
+1
+arg: $1
+arg: 1
+line is: add $0, $1endline
+add
+$0
+$1
+arg: $0
+arg: $1
+line is: TRAP PUSH, $0endline
+TRAP
+PUSH
+$0
+arg: PUSH
+arg: $0
+line is: TRAP RET, 0endline
+TRAP
+RET
+0
+arg: RET
+arg: 0
+line is: endline
+line is: endline
+operations: TRAP
+POP
+operations: set
+$2
+0
+operations: slt
+$3
+$1
+$2
+operations: set
+$2
+1
+operations: beq
+$2
+$3
+label1:
+Label: with index:1
+operations: set
+$2
+3
+operations: slt
+$3
+$1
+$2
+operations: set
+$2
+1
+operations: beq
+$2
+$3
+label2:
+Label: with index:2
+operations: set
+$2
+29
+operations: beq
+$1
+$2
+label3:
+Label: with index:3
+operations: set
+$4
+1
+operations: sub
+$2
+$1
+$4
+operations: sub
+$3
+$2
+$4
+operations: TRAP
+PUSH
+operations: TRAP
+PUSH
+operations: TRAP
+CALL
+Aha!
+nullat the end

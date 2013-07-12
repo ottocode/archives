@@ -1,0 +1,6 @@
+lab0 beta release for our ISA
+
+ourmanual/ has the manual for our isa
+
+
+Assemble.java is the custom assembler for our ISA.  ultraMega.s and fibo.s may not be optimized, but Assemble.java is highly optimized to produce output (notice the word order).

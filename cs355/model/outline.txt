@@ -1,0 +1,34 @@
+Model Outline
+
+Business Parameters
+
+-Webserver
+    --Units (processor / memory)
+
+-Database
+    --Units (processor / memory)
+
+-Storage
+    --Units (max size)
+
+
+
+Client Parameters
+-number
+-webserver wants
+-storage wants
+-database wants
+-webserver usage
+-storage usage
+-database usage
+
+
+P% = highest threshold of problems
+C% = lowest overage of capacity 
+
+For new time interval
+-compute needs
+-compute capacity
+-if
+    --problems > P%, increase capacity
+    --needs < C%, lower capacity

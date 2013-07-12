@@ -1,0 +1,1877 @@
+% Copyright (c) 2012, Michael Taylor. All rights reserved.
+%
+% Redistribution and use in source and binary forms, with or without modification, are permitted provided that 
+% the following conditions are met:
+%
+% Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+%
+% Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer
+% in the documentation and/or other materials provided with the distribution.
+%
+% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED
+% WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+% PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY
+% DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+% PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+% HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+% NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+% POSSIBILITY OF SUCH DAMAGE.  
+
+
+%\headerstretch
+%\chapter[The Raw Architecture Instruction Set]{The Raw Architecture \\
+% Instruction Set}
+%\chaptermark{The Raw Architecture \\ Instruction Set}
+%\label{chap:instruction-set}
+
+\chapter{Instruction Set Manual}
+\footnotetext{Based on a Template provided by Prof. Michael Taylor of UC San Diego. Free for general use as long as this notice remains here.}
+
+
+\standardstretch
+\section{Compute Processor Instruction Set}
+\label{sec:compute-processor-instruction-set}
+
+Refer to Section~\ref{sec:semantic-helper-functions} for concrete definitions of semantic helper functions
+such as {\em{sign-extend-16-to-32}} and {\em{rotate-left}}.
+
+\newcommand{\RawTag}{}
+\newcommand{\RawTagH}{RawH}
+\newcommand{\MIPSTag}{MIPS}
+\newcommand{\rawJxxLink}{[31]\ \ \  \(\leftarrow\) \{ PC + 4 \}\(\sb{31..00}\)}
+\newcommand{\rawJxxLb}{PC\({\sb{31..02}}\) \(\leftarrow\) ({\em{zero-extend-16-to-30}} targ16)}
+\newcommand{\rawJxxZeroLowBits}{PC\({\sb{01..00}}\) \(\leftarrow\) 0}
+
+\subsection{Register Conventions}
+The compute processor uses register conventions similar to those used in MIPS microprocessors.
+Procedures cannot rely on {\em caller-saved} registers retaining their values upon a procedure call.
+Procedures must restore the initial values of {\em callee-saved} registers before returning to their caller.
+The conventions are shown below.
+\vspace{5mm}
+
+
+\tablestretch
+
+\begin{tabular}{|l|l|c|l|} \hline
+\mbttopb Register & Assembly        & Saved         & Description                                                    \\
+\mbtbotb Number   & Alias           & by         &                                                                \\  \hline
+\$0               &                 & n/a           & Always has value zero.                                                  \\
+\$1               & \$at            & caller        & Assembler temporary clobbered by some assembler operations.            \\
+\$2..\$3          &                 & caller        & First and second words of return value, respectively.                   \\
+\$4..\$7          &                 & caller        & First 4 arguments of function.                                          \\
+\$8..\$15         &                 & caller        & General registers.                                                      \\
+\$16..\$23        &                 & callee        & General registers.                                                      \\ \hline
+\$24              & \$cst[i/o]      & n/a           & Static Network input/output port.                                       \\
+\$25              & \$cgn[i/o]      & n/a           & General Dynamic Network input/output port.                              \\
+\$26              & \$csti2         & n/a           & Static Network input port \#2.                                          \\
+\$27              & \$cmn[i/o]      & n/a           & Memory Dynamic Network input/output port.                               \\ \hline
+\$28              & \$gp            & callee        & Global pointer. Points to start of tile's code and static data. \\
+\$29              & \$sp            & callee        & Stack pointer. Stack grows towards lower addresses.                     \\
+\$30              &                 & callee        & General register.                                                       \\
+\$31              &                 & caller        & Link register. Saves return address for function call.                  \\ \hline
+\end{tabular}
+\vspace{-5mm}
+\standardstretch
+
+%this does the fancy ..INSTR notation
+%\newcommand{\rawInstrEnd}{\end{minipage}\vspace{10mm}\fancyfoot[LE,RO]{\ldots \curInstr}}
+%\newcommand{\rawInstrListEnd}{\fancyfoot[LE,RO]{\ldots \nextInstr}}
+\newcommand{\rawInstrEnd}{\end{minipage}\vspace{10mm}}
+\newcommand{\rawInstrListEnd}{}
+\codestretch
+
+\newpage
+
+\subsection{Compute Processor Instruction Template}
+
+Shown below is an example instruction listing.  The {\em instruction occupancy} is the number of compute
+processor issue cycles that are occupied by the instruction.  Subsequent instructions must wait for this
+number of cycles before issuing.  The {\em instruction latency} is the total number of cycles that must pass
+before a subsequent dependent instruction can issue. Suffixes of {\em d} and {\em f} indicate that an
+instruction uses the integer and floating-point divide units, respectively, for that number of
+cycles. Subsequent instructions that require a particular unit will stall until that unit is free. 
+A suffix of {\em b} means that the instruction has an additional 3 cycles of occupancy on a branch misprediction.
+An occupancy of {\em c} means that the instruction takes at least 13 cycles if a cache line is evicted,
+5 cycles if only an invalidation occurs, otherwise 1 cycle.
+
+The {\em s} or {\em p} bits in the instruction encoding specify respectively whether 1) an instruction's
+output will be copied to \rawnib{csto} in addition to the destination register, or 2) whether a branch is
+predicted taken or not.
+
+
+Generally, the Raw compute processor attempts to inherit the MIPS instruction set mnemonics to the
+extent that it reduces the learning curve for new users of the system.  However, the underlying instruction semantics
+have been ``cleaned up''; for instance, interlocks have been added for load, branch, multiply 
+and divide instructions (reducing the need to insert \rawinstr{nop}s), and the FPU uses the same register set as the ALU. To this
+end, the {\em instruction origin} specifies whether the instruction semantics are very similar the MIPS
+instruction of the same name (``\MIPSTag''), whether they are specific to the Raw architecture (``\RawTag'' or Raw),
+or to the Raw architecture extended with hardware instruction caching (``\RawTagH''). Of course, the
+instruction encodings (including the presence of {\em s} and {\em p} bits) are completely different from MIPS.
+
+\ \\
+\ \\
+\ \\
+\ \\
+\ \\
+\ \\
+\ \\
+\ \\
+\ \\
+
+\newcommand{\nextInstr}{}
+\newcommand{\curInstr}{}
+\rawRRRFloat {EXMPL} {0 0 0 0 0 0} {Example (Fictitious) Instruction} {4f} {\RawTagH} {rt} {rd} {1 0 0 0 0}
+\begin{alltt}
+        [rd]\({\sb{31..0}}\) \(\leftarrow\) [rs]\({\sb{31..0}}\) /\(\sb{IEEE-754}\) [rt]\({\sb{31..0}}\)
+\end{alltt}
+
+\psbezier{->}(4,5.75)(3,4)(1,6)(0,4.75)\rput[B]{0}(4,6){Instruction Mnemonic}%
+\psbezier{->}(9,5.5)(8,4)(7,6)(5,4.5)\rput[B]{0}(9,5.75){Instruction Description}
+\psbezier{->}(12.5,5.5)(13.5,4.5)(14.0,5.5)(14.5,4.5)\rput[B]{0}(13,5.75){Instruction Origin}
+\psbezier{->}(13,-.5)(12,.5)(11,-1.0)(9.5,1.5)\rput[T]{0}(13,-.75){Instruction Encoding}
+\psbezier{->}(7.5,-2.0)(6.5,-.5)(6.0,-2.0)(5.5,.3)\rput[T]{0}(7.5,-2.25){Instruction Semantics}
+\psbezier{->}(2,-1.5)(-.1,-1.7)(.6,2.35)(.1,2.7)\rput[l]{0}(2.25,-1.5){Instruction Latency}
+\psbezier{->}(1,-2.2)(.75,-2.2)(-.3,-1)(-.1,1.65)\rput[l]{0}(1.25,-2.2){Instruction Occupancy}
+\psbezier{->}(9.25,-1.0)(8.0,-.25)(7.5,-1.0)(7.3,.6)\rput[T]{0}(9.25,-1.25){Register File Access}
+\psbezier{->}(2.75,-.75)(1.75,-1)(1.4,-1)(1.0,1.55)\rput[l]{0}(3.0,-.75){{\em s} or {\em p} bit }
+\rawInstrEnd
+
+\newpage
+% mips manual say ADDI is sign extended
+
+\rawsimminstrnolatency    {ADDIU}    {1 0 1 1 1}    {Add Immediate}        {1}   {\MIPSTag}
+\begin{alltt}
+        simm32\(\sb{31..0}\) \(\leftarrow\) ({\em{sign-extend-16-to-32}} simm16)
+        [rt]\(\sb{31..0}\)   \(\leftarrow\) \{ [rs]\(\sb{31..0}\) + simm32 \}\(\sb{31..0}\)
+\end{alltt}\rawInstrEnd
+
+\rawRRRinstr           {ADDU}   {1 0 0 0 0 1}    {Add}                           {1}    {\MIPSTag}
+\begin{alltt}
+        [rd]\({\sb{31..00}}\) \(\leftarrow\) \{ [rs]\({\sb{31..00}}\) + [rt]\({\sb{31..00}}\) \}\(\sb{31..0}\)
+\end{alltt}\rawInstrEnd
+
+\rawRRRinstr           {AND}   {1 0 0 1 0 0}     {And Bitwise}                   {1}    {\MIPSTag}
+\begin{alltt}
+        [rd]\({\sb{31..00}}\) \(\leftarrow\) [rs]\({\sb{31..00}}\) & [rt]\({\sb{31..00}}\)
+\end{alltt}\rawInstrEnd
+
+% mips manual say ANDI is zero extended
+\rawuimminstrnolatency    {ANDI}    {0 0 1 0 0}    {And Bitwise Immediate}        {1}    {\MIPSTag}
+\begin{alltt}
+        [rt]\({\sb{31..16}}\) \(\leftarrow\) [rs]\({\sb{31..16}}\)
+        [rt]\({\sb{15..00}}\) \(\leftarrow\) [rs]\({\sb{15..00}}\) & uimm16
+\end{alltt}\rawInstrEnd
+
+\rawuimminstrnolatency     {AUI}    {0 0 1 1 1}    {Add Upper Immediate}           {1}    {\RawTag}
+\begin{alltt}
+        [rt]\({\sb{31..16}}\) \(\leftarrow\) \{ [rs]\({\sb{31..16}}\) + uimm16 \}\(\sb{15..0}\)
+        [rt]\({\sb{15..00}}\) \(\leftarrow\) [rs]\({\sb{15..00}}\)
+\end{alltt}\rawInstrEnd
+
+\rawpseudosingle {B} {Branch Unconditional (Assembly Macro)} {1} {\RawTag} {{\em b $<$label$>$ }}
+\begin{alltt}
+        PC\({\sb{31..00}}\) \(\leftarrow\) <label>
+\end{alltt}\rawInstrEnd
+
+\rawBEQBNE      {BEQ}     {1 1 0 1 1} {Branch if equal}                   {1b}   {\RawTag}
+\begin{alltt}
+        if ([rs] == [rt])
+           PC\({\sb{31..02}}\) \(\leftarrow\) \{ PC\({\sb{31..02}}\) + ({\em{sign-extend-16-to-30}} boffs16) \}\(\sb{29..00}\)
+           PC\({\sb{01..00}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+\rawREGIMMinstr  {BGEZ}     {0 0 0 1 0} {Branch if greater than or equal to zero (signed)}    {1b}   {\RawTag}
+\begin{alltt}
+        if (![rs]\(\sb{31}\))
+           PC\({\sb{31..02}}\) \(\leftarrow\) \{ PC\({\sb{31..02}}\) + ({\em{sign-extend-16-to-30}} boffs16) \}\(\sb{29..00}\)
+           PC\({\sb{01..00}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+\rawREGIMMinstr  {BGEZAL}     {1 0 0 1 0} {Branch if greater than or equal to zero and link (signed)}    {1b}   {\RawTag}
+\begin{alltt}
+        if (![rs]\(\sb{31}\))
+           [31]   \(\leftarrow\) \{ PC + 4 \}\(\sb{31..00}\)
+           PC\({\sb{31..02}}\) \(\leftarrow\) \{ PC\({\sb{31..02}}\) + ({\em{sign-extend-16-to-30}} boffs16) \}\(\sb{29..00}\)
+           PC\({\sb{01..00}}\) \(\leftarrow\) 0
+        else
+           [31]   \(\leftarrow\) \{ PC + 4 \}\(\sb{31..00}\)
+\end{alltt}\rawInstrEnd
+
+\rawREGIMMinstr  {BGTZ}     {0 0 0 1 1} {Branch if greater than zero (signed)}    {1b}   {\RawTag}
+\begin{alltt}
+        if (![rs]\(\sb{31}\) && ([rs] != 0))
+           PC\({\sb{31..02}}\) \(\leftarrow\) \{ PC\({\sb{31..02}}\) + ({\em{sign-extend-16-to-30}} boffs16) \}\(\sb{29..00}\)
+           PC\({\sb{01..00}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+% mbt: I verified that it really is PC+offs, not PC+4+offs
+\rawBLinstr     {BL}    {1 1 1 0 0}    {Branch Long}                  {1}    {\RawTagH}
+\begin{alltt}
+        PC\({\sb{31..02}}\) \(\leftarrow\) \{ PC\({\sb{31..02}}\) + ({\em{sign-extend-26-to-30}} boffs26) \}\(\sb{29..00}\)
+        PC\({\sb{01..00}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+% mbt: I verified that it really is PC+offs, not PC+4+offs
+\rawBLinstr     {BLAL}    {1 1 1 0 1}    {Branch Long and Link}            {1}    {\RawTagH}
+\begin{alltt}
+        [31]   \(\leftarrow\) \{ PC + 4 \}\(\sb{31..00}\)
+        PC\({\sb{31..02}}\) \(\leftarrow\) \{ PC\({\sb{31..02}}\) + ({\em{sign-extend-26-to-30}} boffs26) \}\(\sb{29..00}\)
+        PC\({\sb{01..00}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+\rawREGIMMinstr  {BLEZ}     {0 0 0 0 1} {Branch if less than or equal to zero (signed)}    {1b}   {\RawTag}
+\begin{alltt}
+        if ([rs]\(\sb{31}\) || ([rs] == 0))
+           PC\({\sb{31..02}}\) \(\leftarrow\) \{ PC\({\sb{31..02}}\) + ({\em{sign-extend-16-to-30}} boffs16) \}\(\sb{29..00}\)
+           PC\({\sb{01..00}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+\rawREGIMMinstr  {BLTZ}     {0 0 0 0 0} {Branch if less than zero (signed)}    {1b}   {\RawTag}
+\begin{alltt}
+        if ([rs]\(\sb{31}\))
+           PC\({\sb{31..02}}\) \(\leftarrow\) \{ PC\({\sb{31..02}}\) + ({\em{sign-extend-16-to-30}} boffs16) \}\(\sb{29..00}\)
+           PC\({\sb{01..00}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+\rawREGIMMinstr  {BLTZAL}     {0 0 0 0 0} {Branch if less than zero and link (signed)}    {1b}   {\RawTag}
+\begin{alltt}
+        if ([rs]\(\sb{31}\))
+           [31]   \(\leftarrow\) \{ PC + 4 \}\(\sb{31..00}\)
+           PC\({\sb{31..02}}\) \(\leftarrow\) \{ PC\({\sb{31..02}}\) + ({\em{sign-extend-16-to-30}} boffs16) \}\(\sb{29..00}\)
+           PC\({\sb{01..00}}\) \(\leftarrow\) 0
+        else
+           [31]   \(\leftarrow\) \{ PC + 4 \}\(\sb{31..00}\)
+\end{alltt}\rawInstrEnd
+
+\rawBEQBNE      {BNE}     {1 1 0 1 0} {Branch if not equal}                   {1b}   {\RawTag}
+\begin{alltt}
+        if ([rs] != [rt])
+           PC\({\sb{31..02}}\) \(\leftarrow\) \{ PC\({\sb{31..02}}\) + ({\em{sign-extend-16-to-30}} boffs16) \}\(\sb{29..00}\)
+           PC\({\sb{01..00}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+\rawBEQBNE      {BNEA}     {1 1 0 0 1} {Branch if not equal and add}                   {1b}   {\RawTag}
+\begin{alltt}
+        if ([rs] != [rt])
+           PC\({\sb{31..02}}\) \(\leftarrow\) \{ PC\({\sb{31..02}}\) + ({\em{sign-extend-16-to-30}} boffs16) \}\(\sb{29..00}\)
+           PC\({\sb{01..00}}\) \(\leftarrow\) 0
+        [rs] = [rs] + SR[BR_INC]
+\end{alltt}\rawInstrEnd
+
+\rawRZeroRinstr           {CLZ}   {1 1 1 0 0 1}    {Count Leading Zero}                           {1}    {\RawTag}
+\begin{alltt}
+        [rd]\({\sb{05..00}}\) \(\leftarrow\) \(\displaystyle\sum\sb{i=0}\sp{31}\) ([rs]\({\sb{31..i}}\) ? 0 : 1)
+        [rd]\({\sb{31..06}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+% we interlock div instead of using bogus mips semantics
+% the semantics on divide by zero are from simulator
+\rawDIVinstr           {DIV}   {0 1 1 0 1 0}    {Divide Signed}                           {1}{42d}    {\RawTag}
+\begin{alltt}
+        LO \(\leftarrow\) \{ [rs] /\(\sb{signed}\) [rt] \}\(\sb{31..0}\) \}\(\sb{31..0}\)
+        HI \(\leftarrow\) \{ [rs] %\(\sb{signed}\) [rt] \}\(\sb{31..0}\) \}\(\sb{63..32}\)
+
+        if ([rt] == 0)
+           HI \(\leftarrow\) [rs]
+           if ([rs]\({\sb{31}}\))
+              LO \(\leftarrow\) 1
+           else
+              LO \(\leftarrow\) -1
+\end{alltt}\rawInstrEnd
+
+\rawDIVinstr           {DIVU}   {0 1 1 0 1 1}    {Divide Unsigned}                           {1}{42d}    {\RawTag}
+\begin{alltt}
+        LO \(\leftarrow\) \{ [rs] /\(\sb{unsigned}\) [rt] \}\(\sb{31..0}\) \}\(\sb{31..0}\)
+        HI \(\leftarrow\) \{ [rs] %\(\sb{unsigned}\) [rt] \}\(\sb{31..0}\) \}\(\sb{63..32}\)
+
+        if ([rt] == 0)
+           HI \(\leftarrow\) [rs]
+           LO \(\leftarrow\) -1
+\end{alltt}\rawInstrEnd
+
+\rawREGIMMjmpuncondinstr  {J}     {0 1 1 0 0} {Jump}    {1}   {\RawTag}
+\begin{alltt}
+           \rawJxxLb
+           \rawJxxZeroLowBits
+\end{alltt}\rawInstrEnd
+
+\rawREGIMMjmpinstr      {JAL}     {1 1 1 0 0} {Jump and link}                   {1}   {\RawTag}
+\begin{alltt}
+        \rawJxxLink
+        \rawJxxLb
+        \rawJxxZeroLowBits
+\end{alltt}\rawInstrEnd
+
+\rawRZeroZeroinstr     {JALR}     {0 0 1 0 0 1} {Jump and link through Register}   {4}   {\RawTag}
+\begin{alltt}
+        \rawJxxLink
+        PC\({\sb{31..02}}\) \(\leftarrow\) [rs]\({\sb{31..02}}\)
+        \rawJxxZeroLowBits
+\end{alltt}\rawInstrEnd
+
+% fixme really \RawTag-only
+\rawJEQJNE      {JEQL}     {1 1 1 1 1} {Jump if not equal and link}                   {1b}   {\RawTag}
+\begin{alltt}
+        if ([rs] == [rt])
+           \rawJxxLink
+           \rawJxxLb
+           \rawJxxZeroLowBits
+        else
+           \rawJxxLink
+\end{alltt}\rawInstrEnd
+
+\rawREGIMMjmpinstr  {JGEZL}     {1 0 1 1 0} {Jump if greater than or equal to zero and link (signed)}    {1b}   {\RawTag}
+\begin{alltt}
+        if (![rs]\(\sb{31}\))
+           \rawJxxLink
+           \rawJxxLb
+           \rawJxxZeroLowBits
+        else
+           \rawJxxLink
+\end{alltt}\rawInstrEnd
+
+\rawREGIMMjmpinstr  {JGTZL}     {1 0 1 1 1} {Jump if greater than zero and link (signed)}    {1b}   {\RawTag}
+\begin{alltt}
+        if (![rs]\(\sb{31}\) && ([rs] != 0))
+           \rawJxxLink
+           \rawJxxLb
+           \rawJxxZeroLowBits
+        else
+           \rawJxxLink
+\end{alltt}\rawInstrEnd
+
+\rawREGIMMjmpinstr  {JLEZL}     {1 0 1 0 1} {Jump if less than or equal to zero and link (signed)}    {1b}   {\RawTag}
+\begin{alltt}
+        if ([rs]\(\sb{31}\) || ([rs] == 0))
+           \rawJxxLink
+           \rawJxxLb
+           \rawJxxZeroLowBits
+        else
+           \rawJxxLink
+\end{alltt}\rawInstrEnd
+
+\rawREGIMMjmpinstr  {JLTZL}     {1 0 1 0 0} {Jump if less than zero and link (signed)}    {1b}   {\RawTag}
+\begin{alltt}
+        if ([rs]\(\sb{31}\))
+           \rawJxxLink
+           \rawJxxLb
+           \rawJxxZeroLowBits
+        else
+           \rawJxxLink
+\end{alltt}\rawInstrEnd
+
+\rawJEQJNE      {JNEL}     {1 1 1 1 0} {Jump if not equal and link}                   {1b}   {\RawTag}
+\begin{alltt}
+        if ([rs] != [rt])
+           \rawJxxLink
+           \rawJxxLb
+           \rawJxxZeroLowBits
+        else
+           \rawJxxLink
+\end{alltt}\rawInstrEnd
+
+\rawRZeroZeroinstr     {JR}      {0 0 1 0 0 0} {Jump through Register}   {4}   {\RawTag}
+\begin{alltt}
+        PC\({\sb{31..02}}\) \(\leftarrow\) [rs]\({\sb{31..02}}\)
+        \rawJxxZeroLowBits
+\end{alltt}\rawInstrEnd
+
+% mbt fixme: add notation that shows hardware caching is on/off
+\rawRZeroZeroinstr     {JRHOFF}      {0 0 1 0 1 1} {Jump through Register and Disable Hardware ICaching}   {4}   {\RawTagH}
+\begin{alltt}
+        PC\({\sb{31..02}}\) \(\leftarrow\) [rs]\({\sb{31..02}}\)
+        \rawJxxZeroLowBits
+\end{alltt}\rawInstrEnd
+
+\rawRZeroZeroinstr     {JRHON}      {0 0 1 0 1 0} {Jump through Register and Enable Hardware ICaching}   {4}   {\RawTagH}
+\begin{alltt}
+        PC\({\sb{31..02}}\) \(\leftarrow\) [rs]\({\sb{31..02}}\)
+        \rawJxxZeroLowBits
+\end{alltt}\rawInstrEnd
+
+\rawldinstr                {LB}     {1 0 0 0 0}    {Load Byte}               {1}{3} {\RawTag}
+\begin{alltt}
+        ea    \(\leftarrow\) \{ [base] + ({\em{sign-extend-16-to-32}} soffs16) \}\(\sb{31..0}\)
+        [rt]  \(\leftarrow\) ({\em{sign-extend-8-to-32}} ({\em{cache-read-byte}} ea))
+\end{alltt}\rawInstrEnd
+
+\rawldinstr               {LBU}    {1 0 0 0 1}    {Load Byte Unsigned}      {1}{3} {\RawTag}
+\begin{alltt}
+        ea \hspace{1mm}      \(\leftarrow\) \{ [base] + ({\em{sign-extend-16-to-32}} soffs16) \}\(\sb{31..0}\)
+        [rt]\(\sb{31..8}\) \hspace{.5mm} \(\leftarrow\) 0
+        [rt]\(\sb{7..0}\)  \hspace{.25mm} \(\leftarrow\) ({\em{cache-read-byte}} ea)
+\end{alltt}\rawInstrEnd
+
+% mbt fixme some sort of note that cache-read-half-word ignores low bit
+\rawldinstr                {LH}     {1 0 0 1 0}    {Load Halfword}           {1}{3} {\RawTag}
+\begin{alltt}
+        ea    \(\leftarrow\) \{ [base] + ({\em{sign-extend-16-to-32}} soffs16) \}\(\sb{31..0}\)
+        [rt]  \(\leftarrow\) ({\em{sign-extend-16-to-32}} ({\em{cache-read-half-word}} ea))
+\end{alltt}\rawInstrEnd
+
+% mbt fixme some sort of note that cache-read-half-word ignores low bit
+\rawldinstr                {LHU}    {1 0 0 1 1}    {Load Halfword Unsigned}  {1}{3} {\RawTag}
+\begin{alltt}
+        ea        \(\leftarrow\) \{ [base] + ({\em{sign-extend-16-to-32}} soffs16) \}\(\sb{31..0}\)
+        [rt]\(\sb{31..16}\)  \(\leftarrow\) 0
+        [rt]\(\sb{15..0}\)   \(\leftarrow\) ({\em{cache-read-half-word}} ea)
+\end{alltt}\rawInstrEnd
+
+\rawpseudo     {LI}       {Load Immediate (Assembly Macro)} {1-2} {\MIPSTag} {{\em li~~rd, uimm32}} {{\em li!~rd, uimm32}}
+\begin{alltt}
+        [rd]\(\sb{31..0}\)  \(\leftarrow\) uimm32\(\sb{31..0}\)
+\end{alltt}\rawInstrEnd
+
+
+% mbt fixme some sort of note that cache-read-word ignores low two bits
+\rawldinstr                {LW}     {1 0 1 0 0}    {Load Word}               {1}{3} {\RawTag}
+\begin{alltt}
+        ea    \(\leftarrow\) \{ [base] + ({\em{sign-extend-16-to-32}} soffs16) \}\(\sb{31..0}\)
+        [rt]  \(\leftarrow\) ({\em{cache-read-word}} ea)
+\end{alltt}\rawInstrEnd
+
+\rawMAGIC              {MAGIC}     {0 0 0 0 1} {User-specified simulator function}  {1}   {\RawTag}
+\begin{alltt}
+        [rt]\({\sb{31..00}}\) \(\leftarrow\)  ({\em{user_function}} code [rs]) - {\textsf{On BTL simulator}}
+
+        [rt]\({\sb{31..00}}\) \(\leftarrow\)  {\em{unspecified value}}         - {\textsf{On RTL and hardware}}
+
+\end{alltt}\rawInstrEnd
+
+% fixme: notation that these are blocking?
+\rawZeroZeroRinstr     {MFFD}      {0 1 0 1 0 0} {Move from FD}   {1f}   {\RawTag}
+\begin{alltt}
+        [rd]\({\sb{31..00}}\) \(\leftarrow\)  FD\({\sb{31..00}}\)
+\end{alltt}\rawInstrEnd
+
+\rawZeroZeroRinstr     {MFHI}      {0 1 0 0 0 0} {Move from HI}   {1d}   {\RawTag}
+\begin{alltt}
+        [rd]\({\sb{31..00}}\) \(\leftarrow\)  HI\({\sb{31..00}}\)
+\end{alltt}\rawInstrEnd
+
+\rawZeroZeroRinstr     {MFLO}      {0 1 0 0 1 0} {Move from LO}   {1d}   {\RawTag}
+\begin{alltt}
+        [rd]\({\sb{31..00}}\) \(\leftarrow\)  LO\({\sb{31..00}}\)
+\end{alltt}\rawInstrEnd
+
+\rawpseudo     {MOVE}       {MOVE (Assembly Macro)} {1} {\MIPSTag} {{\em move~~rd, rt}} {{\em move!~rd, rt}}
+\begin{alltt}
+        [rd]\(\sb{31..0}\)  \(\leftarrow\) [rt]\(\sb{31..0}\)
+\end{alltt}\rawInstrEnd
+
+
+% fixme: notation that these are blocking?
+\rawRZeroZeroinstr     {MTFD}      {0 1 0 1 0 1} {Move to FD}   {1f}   {\RawTag}
+\begin{alltt}
+        FD\({\sb{31..00}}\) \(\leftarrow\) [rs]\({\sb{31..00}}\)
+\end{alltt}\rawInstrEnd
+
+\rawRZeroZeroinstr     {MTHI}      {0 1 0 0 0 1} {Move to HI}   {1d}   {\RawTag}
+\begin{alltt}
+        HI\({\sb{31..00}}\) \(\leftarrow\) [rs]\({\sb{31..00}}\)
+\end{alltt}\rawInstrEnd
+
+\rawRZeroZeroinstr     {MTLO}      {0 1 0 0 1 1} {Move to LO}   {1d}   {\RawTag}
+\begin{alltt}
+        LO\({\sb{31..00}}\) \(\leftarrow\) [rs]\({\sb{31..00}}\)
+\end{alltt}\rawInstrEnd
+
+% mbt fixme mention in compute processor implementation section that mullo is more amenable to register-mapped
+% ports.
+\rawRRRinstrLat           {MULLO}  {0 1 1 0 0 0}    {Multiply Low Signed}             {1}{2}    {\RawTag}
+\begin{alltt}
+        [rd]\({\sb{31..00}}\) \(\leftarrow\) \{ [rs]\({\sb{31..00}}\) *\({\sb{signed}}\) [rt]\({\sb{31..00}}\)) \}\(\sb{31..0}\)
+\end{alltt}\rawInstrEnd
+
+\rawRRRinstrLat           {MULLU}  {0 1 1 0 0 1}    {Multiply Low Unsigned}             {1}{2}    {\RawTag}
+\begin{alltt}
+        [rd]\({\sb{31..00}}\) \(\leftarrow\) \{ [rs]\({\sb{31..00}}\) *\({\sb{unsigned}}\) [rt]\({\sb{31..00}}\)) \}\(\sb{31..0}\)
+\end{alltt}\rawInstrEnd
+
+\rawRRRinstrLat           {MULHI}  {1 0 1 0 0 0}    {Multiply High Signed}             {1}{2}    {\RawTag}
+\begin{alltt}
+        [rd]\({\sb{31..00}}\) \(\leftarrow\) \{ [rs]\({\sb{31..00}}\) *\({\sb{signed}}\) [rt]\({\sb{31..00}}\)) \}\(\sb{63..32}\)
+\end{alltt}\rawInstrEnd
+
+\rawRRRinstrLat           {MULHU}  {1 0 1 0 0 1}    {Multiply High Unsigned}             {1}{2}    {\RawTag}
+\begin{alltt}
+        [rd]\({\sb{31..00}}\) \(\leftarrow\) \{ [rs]\({\sb{31..00}}\) *\({\sb{unsigned}}\) [rt]\({\sb{31..00}}\)) \}\(\sb{63..32}\)
+\end{alltt}\rawInstrEnd
+
+\rawRRRinstr           {NOR}   {1 0 0 1 1 1}    {Nor Bitwise}                      {1}    {\MIPSTag}
+\begin{alltt}
+        [rd]\({\sb{31..00}}\) \(\leftarrow\) ~([rs]\({\sb{31..00}}\) | [rt]\({\sb{31..00}}\))
+\end{alltt}\rawInstrEnd
+
+\rawRRRinstr           {OR}    {1 0 0 1 0 1}    {Or Bitwise}                       {1}    {\MIPSTag}
+\begin{alltt}
+        [rd]\({\sb{31..00}}\) \(\leftarrow\) [rs]\({\sb{31..00}}\) | [rt]\({\sb{31..00}}\)
+\end{alltt}\rawInstrEnd
+
+% mips manual say ORI is zero extended
+\rawuimminstrnolatency    {ORI}    {0 0 0 1 0}    {Or Bitwise Immediate}              {1}    {\MIPSTag}
+\begin{alltt}
+        [rt]\({\sb{31..16}}\) \(\leftarrow\) [rs]\({\sb{31..16}}\)
+        [rt]\({\sb{15..00}}\) \(\leftarrow\) [rs]\({\sb{15..00}}\) | uimm16
+\end{alltt}\rawInstrEnd
+
+% yes popcount is only one cycle
+\rawRZeroRinstr           {POPC}   {1 1 1 0 0 0}    {Population Count}               {1}    {\RawTag}
+\begin{alltt}
+        [rd]\({\sb{04..00}}\) \(\leftarrow\) \(\displaystyle\sum\sb{i=0}\sp{31}\) [rs]\({\sb{i}}\)
+        [rd]\({\sb{31..05}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+\rawRLM  {RLM} {1 0 1 S 0 0} { Rotate Left and Mask }  {1} {\RawTag} {ra}
+\begin{alltt}
+        mask    \(\leftarrow\) ({\em{create-mask}} mb me z)
+        [rt]\(\sb{31..0}\) \(\leftarrow\) ({\em{left-rotate}} [rs]\(\sb{31..0}\) ra) & mask
+\end{alltt}\rawInstrEnd
+
+\rawRLM  {RLMI} {1 0 1 S 0 1} { Rotate Left and Masked Insert }  {1} {\RawTag} {ra}
+\begin{alltt}
+        mask    \(\leftarrow\) ({\em{create-mask}} mb me z)
+        [rt]\(\sb{31..0}\) \(\leftarrow\) (({\em{left-rotate}} [rs]\(\sb{31..0}\) ra) & mask) | ([rt]\(\sb{31..0}\) & ~mask)
+\end{alltt}\rawInstrEnd
+
+\rawRLM  {RLVM} {1 0 1 S 1 0} { Rotate Left Variable and Mask }  {1} {\RawTag} {rd}
+\begin{alltt}
+        mask    \(\leftarrow\) ({\em{create-mask}} mb me z)
+        ra      \(\leftarrow\) [rt]\(\sb{31..0}\)
+        [rd]\(\sb{31..0}\) \(\leftarrow\) ({\em{left-rotate}} [rs]\(\sb{31..0}\) ra) & mask
+\end{alltt}\rawInstrEnd
+
+\rawpseudo     {RRM}       { Rotate Right and Mask (Assembly Macro) } {1} {\RawTag} {{\em rrm~~rt, rs, ra, mask}} {{\em rrm!~rt, rs, ra, mask}}
+\begin{alltt}
+        [rt]\(\sb{31..0}\) \(\leftarrow\) ({\em{right-rotate}} [rs]\(\sb{31..0}\) ra) & mask
+
+        {\textsf{(instruction is implemented using RLM; same set of masks are valid)}}
+\end{alltt}\rawInstrEnd
+
+\rawpseudo     {RRMI}       { Rotate Right and Mask (Assembly Macro) } {1} {\RawTag} {{\em rrmi~~rt, rs, ra, mask}} {{\em rrmi!~rt, rs, ra, mask}}
+\begin{alltt}
+        [rt]\(\sb{31..0}\) \(\leftarrow\) (({\em{right-rotate}} [rs]\(\sb{31..0}\) ra) & mask) | ([rt]\(\sb{31..0}\) & ~mask)
+
+        {\textsf{(instruction is implemented using RLMI; same set of masks are valid)}}
+\end{alltt}\rawInstrEnd
+
+\rawRRRinstrsa         {SLL}    {0 0 0 0 0 0}    {Shift Left Logical}              {1}    {\MIPSTag}
+\begin{alltt}
+        [rt]\({\sb{31..sa}}\) \hspace{.75mm}  \(\leftarrow\) [rs]\({\sb{(31-sa)..0}}\)
+        [rt]\({\sb{(sa-1)..0}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+\rawRRRinstr         {SLLV}    {0 0 0 1 0 0}   {Shift Left Logical Variable}     {1}    {\MIPSTag}
+\begin{alltt}
+        sa      \hspace{1mm}   \(\leftarrow\) [rt]\(\sb{4..0}\)
+        [rd]\({\sb{31..sa}}\) \hspace{.75mm}  \(\leftarrow\) [rs]\({\sb{(31-sa)..0}}\)
+        [rd]\({\sb{(sa-1)..0}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+\rawRRRinstr           {SLT}   {1 0 1 0 1 0}    {Set Less Than Signed}          {1}    {\MIPSTag}
+\begin{alltt}
+        [rd]\({\sb{00}}\) \hspace{.75mm}  \(\leftarrow\) ([rs]\({\sb{31..00}}\) <\(\sb{signed}\) [rt]\({\sb{31..00}}\)) ? 1 : 0
+        [rd]\({\sb{31..01}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+% mips manual say SLTI is zero extended
+\rawsimminstrnolatency          {SLTI}   {1 0 1 1 0}    {Set Less Than Immediate Signed}          {1}    {\MIPSTag}
+\begin{alltt}
+        simm32  \hspace{0mm} \(\leftarrow\) ({\em{sign-extend-16-to-32}} simm16)
+        [rt]\({\sb{00}}\)  \hspace{.75mm} \(\leftarrow\) ([rs]\({\sb{31..00}}\) <\(\sb{signed}\) simm32\({\sb{31..00}}\)) ? 1 : 0
+        [rt]\({\sb{31..01}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+% MIPS manual says SLTIU parameter is signed extended even though it is treated as unsigned
+\rawsimminstrnolatency          {SLTIU}   {1 0 1 0 1}    {Set Less Than Immediate Unsigned}          {1}    {\MIPSTag}
+\begin{alltt}
+        uimm32  \hspace{0mm} \(\leftarrow\) ({\em{sign-extend-16-to-32}} simm16)
+        [rt]\({\sb{00}}\)  \hspace{.75mm} \(\leftarrow\) ([rs]\({\sb{31..00}}\) <\(\sb{unsigned}\) uimm32\({\sb{31..00}}\)) ? 1 : 0
+        [rt]\({\sb{31..01}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+\rawRRRinstr           {SLTU}   {1 0 1 0 1 1}    {Set Less Than Unsigned}          {1}    {\MIPSTag}
+\begin{alltt}
+        [rd]\({\sb{00}}\)  \hspace{1mm} \(\leftarrow\) ([rs]\({\sb{31..00}}\) <\(\sb{unsigned}\) [rt]\({\sb{31..00}}\)) ? 1 : 0
+        [rd]\({\sb{31..01}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+\rawRRRinstrsa         {SRA}    {0 0 0 0 1 1}    {Shift Right Arithmetic}          {1}    {\MIPSTag}
+\begin{alltt}
+        [rt]\({\sb{(31-sa)..00}}\) \(\leftarrow\) [rs]\({\sb{31..sa}}\)
+        [rt]\({\sb{31..(31-sa)}}\) \(\leftarrow\) [rs]\({\sb{31}}\)
+\end{alltt}\rawInstrEnd
+
+% checking with btl shows that ``variable'' versions write to rd and use rt for the shift amount
+\rawRRRinstr          {SRAV}    {0 0 0 1 1 1}    {Shift Right Arithmetic Variable} {1}    {\MIPSTag}
+\begin{alltt}
+        sa           \(\leftarrow\) [rt]\(\sb{4..0}\)
+        [rd]\({\sb{(31-sa)..00}}\) \(\leftarrow\) [rs]\({\sb{31..sa}}\)
+        [rd]\({\sb{31..(31-sa)}}\) \(\leftarrow\) [rs]\({\sb{31}}\)
+\end{alltt}\rawInstrEnd
+
+\rawRRRinstrsa         {SRL}    {0 0 0 0 1 0}    {Shift Right Logical}              {1}    {\MIPSTag}
+\begin{alltt}
+        [rt]\({\sb{(31-sa)..0}}\) \hspace{.5mm} \(\leftarrow\) [rs]\({\sb{31..sa}}\)
+        [rt]\({\sb{(31..(32-sa)}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+\rawRRRinstrsa         {SRLV}    {0 0 0 1 1 0}    {Shift Right Logical Variable}              {1}    {\MIPSTag}
+\begin{alltt}
+        sa           \(\leftarrow\) [rt]\(\sb{4..0}\)
+        [rd]\({\sb{(31-sa)..00}}\) \(\leftarrow\) [rs]\({\sb{31..sa}}\)
+        [rd]\({\sb{31..(32-sa)}}\) \(\leftarrow\) 0
+\end{alltt}\rawInstrEnd
+
+\rawRRRinstr           {SUBU}   {1 0 0 0 1 1}    {Subtract}                           {1}    {\MIPSTag}
+\begin{alltt}
+        [rd]\({\sb{31..00}}\) \(\leftarrow\) \{ [rs]\({\sb{31..00}}\) - [rt]\({\sb{31..00}}\) \}\(\sb{31..0}\)
+\end{alltt}\rawInstrEnd
+
+\rawstinstr                {SB}     {0 1 0 0 0}    {Store Byte}               {1} {\MIPSTag}
+\begin{alltt}
+        ea    \(\leftarrow\) \{ [base] + ({\em{sign-extend-16-to-32}} soffs16) \}\(\sb{31..0}\)
+        ({\em{cache-write-byte}} ea [rt])
+\end{alltt}\rawInstrEnd
+
+\rawstinstr                {SH}     {0 1 0 1 0}    {Store Halfword}           {1} {\MIPSTag}
+\begin{alltt}
+        ea    \(\leftarrow\) \{ [base] + ({\em{sign-extend-16-to-32}} soffs16) \}\(\sb{31..0}\)
+        ({\em{cache-write-half-word}} ea [rt])
+\end{alltt}\rawInstrEnd
+
+% mbt fixme some sort of note that cache-write-word ignores low two bits
+\rawstinstr                {SW}     {0 1 1 0 0}    {Store Word}               {1} {\MIPSTag}
+\begin{alltt}
+        ea    \(\leftarrow\) \{ [base] + ({\em{sign-extend-16-to-32}} soffs16) \}\(\sb{31..0}\)
+        ({\em{cache-write-word}} ea [rt])
+\end{alltt}\rawInstrEnd
+
+\rawRRRinstr           {XOR}   {1 0 0 1 1 0}    {Exclusive-Or Bitwise}                           {1}    {\MIPSTag}
+\begin{alltt}
+        [rd]\({\sb{31..0}}\) \(\leftarrow\) [rs]\({\sb{31..00}}\) ^ [rt]\({\sb{31..00}}\)
+\end{alltt}\rawInstrEnd
+
+% mips manual say XORI is zero extended
+\rawuimminstrnolatency    {XORI}    {0 0 0 1 1}    {Exclusive-Or Bitwise Immediate}        {1}    {\MIPSTag}
+\begin{alltt}
+        [rt]\({\sb{31..16}}\) \(\leftarrow\) [rs]\({\sb{31..16}}\)
+        [rt]\({\sb{15..00}}\) \(\leftarrow\) [rs]\({\sb{15..00}}\) ^ uimm16
+\end{alltt}\rawInstrEnd
+
+\rawRRRFloat {ADD.s} {0 0 0 0 0 0} {Add (single precision floating point)} {4} {\RawTag} {rt} {rd} {1 0 0 0 0}
+\begin{alltt}
+        [rd]\({\sb{31..0}}\) \(\leftarrow\) [rs]\({\sb{31..0}}\) +\(\sb{IEEE-754}\) [rt]\({\sb{31..0}}\)
+\end{alltt}\rawInstrEnd
+
+\rawRRRFloat {C.$\langle$XXX$\rangle$.s} {0 0 code\({\sb{3..0}}\)} {Compare (single precision floating point)} {4} {\RawTag} {rt} {rd} {1 0 0 0 0}
+\begin{alltt}
+        \{invalid\({\sb{0}}\) result\({\sb{0}}\)\}  \hspace{.5mm} \(\leftarrow\) ({\em{floating-point-compare}} \(\langle\)XXX\(\rangle\) [rs]\({\sb{31..0}}\) [rt]\({\sb{31..0}}\))
+        [rd]\({\sb{0}}\)                \(\leftarrow\) result\({\sb{0}}\)
+        [rd]\({\sb{31..1}}\)   \hspace{1mm}          \(\leftarrow\) 0
+        SR[FPSR]\({\sb{4}}\)            \(\leftarrow\) SR[FPSR]\({\sb{4}}\) | invalid\({\sb{0}}\)
+\end{alltt}
+
+e.g., 
+
+\hspace{10mm}{\texttt{c.ult.s \$4, \$5, \$7}}
+
+\vspace{5mm}
+The code values of 8..15 correspond to instructions that set the \rawinstr{invalid} bit
+of the floating point status register (\rawinstr{FPSR}) when an unordered comparison occurs.
+The behavior of the helper function {\em{floating-point-compare}} matches the MIPS ISA~\cite{MIPS_R4000_Users_Manual}
+and is shown in the following table:
+\vspace{5mm}
+
+\newcommand{\tablearrow}[2]{\multirow{#1}*{$\left#2\begin{array}{r}\mbtforloop{2}{#1}{mbtx}{ \\ }\end{array}\hspace{-4mm}\right.$}}
+\newcommand\mbtctop{\raisebox{0ex}% asymmetric behaviour, normally .5
+  {\rule{0pt}{4.0ex}}%
+}
+\newcommand\mbtcbot{\raisebox{-2.0ex}% asymmetric behaviour, normally .5
+  {\rule{0pt}{4.0ex}}%
+}
+
+
+
+% based on section B-4 of R4000 manual by j. heinrich
+\begin{tabular}{|c|c|l||c|c|c|c|c|c|} \hline
+\multicolumn{3}{|c||}{\multirow{2}*{Predicate}}  & \multicolumn{6}{|c|}{{\em{floating-point-compare}} outputs} \\
+\multicolumn{3}{|c||}{ }          & \multicolumn{6}{|c|}{for each comparison outcome} \\ \cline{1-9}
+\multirow{2}*{code}&Mnemonic&\multirow{2}*{Description}& \multicolumn{4}{|c|}{result\({\sb{0}}\)} & \multicolumn{2}{|c|}{invalid\({\sb{0}}\)}  \\ \cline{4-9}
+                    & $\langle$XXX$\rangle$ &  & $>$ & $<$ & $==$ & unordered & $>$, $<$, $==$ & unordered  \\ \hline
+\mbtctop 0  & F    & False                & \tablearrow{8}{\uparrow} &0 &0 &0 & \tablearrow{8}{\uparrow} & \tablearrow{3}{\uparrow} \\
+1  & UN   & Unordered            & &0 &0 &1 & &\\
+2  & EQ   & Equal                & &0 &1 &0 & &\\
+3  & UEQ  & Unordered ==         & &0 &1 &1 & & \multirow{2}*{0}          \\
+4  & OLT  & Ordered $<$          & &1 &0 &0 & & \\
+5  & ULT  & Unordered or $<$     & &1 &0 &1 & & \tablearrow{3}{\downarrow}\\
+6  & OLE  & Ordered $\leq$       & &1 &1 &0 & &\\
+7  & ULE  & Unordered or $\leq$  & \multirow{3}*{0} &1 &1 &1 & \multirow{3}*{0}\mbtcbot & \\ \cline{1-3} \cline{5-7} \cline{9-9}
+8  & SF   & Signaling False      &  \tablearrow{8}{\downarrow}&0 &0 &0 & \tablearrow{8}{\downarrow} & \tablearrow{3}{\uparrow}\mbtctop \\
+9  & NGLE & Not ($>$ or $\leq$)  & &0 &0 &1 & & \\
+10 & SEQ  & Signaling ==         & &0 &1 &0 & &\\
+11 & NGL  & Not ($<$ or $>$)     & &0 &1 &1 & & \multirow{2}*{1}\\
+12 & LT   & $<$                  & &1 &0 &0 & & \\
+13 & NGE  & Not $\geq$           & &1 &0 &1 & & \tablearrow{3}{\downarrow}\\
+14 & LE   & $\leq$               & &1 &1 &0 & &\\
+\mbtcbot 15 & NGT  & Not $>$              & &1 &1 &1 & &\\ \hline
+\end{tabular}
+\rawInstrEnd
+
+\rawRRRFloat {CVT.s} {1 0 0 0 0 0} {Convert from integer to float} {4} {\RawTag} {0 0 0 0 0} {rd} {1 0 1 0 0}
+\begin{alltt}
+        [rd]\({\sb{31..0}}\) \(\leftarrow\) ({\em{convert-from-integer-to-float}} [rs]\({\sb{31..0}}\))
+\end{alltt}\rawInstrEnd
+
+\rawRRRFloat {CVT.w} {1 0 0 1 0 0} {Convert from float to integer, with round to nearest even} {4} {\RawTag} {0 0 0 0 0} {rd} {1 0 0 0 0}
+\begin{alltt}
+        [rd]\({\sb{31..0}}\) \(\leftarrow\) ({\em{convert-from-float-to-integer-round-nearest-even}} [rs]\({\sb{31..0}}\))
+\end{alltt}\rawInstrEnd
+
+\rawRRRFloat {DIV.s} {0 0 0 0 1 1} {Divide (single precision floating point)} {12f} {\RawTag} {rt} {0 0 0 0 0} {1 0 0 0 0}
+\begin{alltt}
+        FD\({\sb{31..0}}\) \(\leftarrow\) [rs]\({\sb{31..0}}\) /\(\sb{IEEE-754}\) [rt]\({\sb{31..0}}\)
+\end{alltt}\rawInstrEnd
+
+\rawRRRFloat {MUL.s} {0 0 0 0 1 0} {Multiply (single precision floating point)} {4} {\RawTag} {rt} {rd} {1 0 0 0 0}
+\begin{alltt}
+        [rd]\({\sb{31..0}}\) \(\leftarrow\) [rs]\({\sb{31..0}}\) *\(\sb{IEEE-754}\) [rt]\({\sb{31..0}}\)
+\end{alltt}\rawInstrEnd
+
+\rawRRRFloat {NEG.s} {0 0 0 1 1 1} {Negate (single precision floating point)} {4} {\RawTag} {0 0 0 0 0} {rd} {1 0 0 0 0}
+\begin{alltt}
+        [rd]\({\sb{31..0}}\) \(\leftarrow\) -\(\sb{IEEE-754}\) [rs]\({\sb{31..0}}\)
+\end{alltt}\rawInstrEnd
+
+\rawRRRFloat {SUB.s} {0 0 0 0 0 1} {Subtract (single precision floating point)} {4} {\RawTag} {rt} {rd} {1 0 0 0 0}
+\begin{alltt}
+        [rd]\({\sb{31..0}}\) \(\leftarrow\) [rs]\({\sb{31..0}}\) -\(\sb{IEEE-754}\) [rt]\({\sb{31..0}}\)
+\end{alltt}\rawInstrEnd
+
+\rawRRRFloat {TRUNC.w} {0 0 1 1 0 1} {~~~Convert from float to integer, with truncation} {4} {\RawTag} {0 0 0 0 0} {rd} {1 0 0 0 0}
+\begin{alltt}
+        [rd]\({\sb{31..0}}\) \(\leftarrow\) ({\em{convert-from-float-to-integer-truncate}} [rs]\({\sb{31..0}}\))
+\end{alltt}\rawInstrEnd
+
+% mbt fixme add semantics
+
+\rawCOMMzzz {DRET}      {0 0 0 0 0 0} {Return from User Interrupt}   {4}   {\RawTag}
+\begin{alltt}
+        PC\({\sb{31..02}}\) \(\leftarrow\) SR[EX_UPC]\({\sb{31..02}}\)
+        \rawJxxZeroLowBits
+        SR[EX_BITS]\({\sb{31}}\) \(\leftarrow\) 1'b1
+\end{alltt}\rawInstrEnd
+
+\rawCOMMzzz {ERET}      {0 0 0 0 1 1} {Return from System Interrupt}   {4}   {\RawTag}
+\begin{alltt}
+        PC\({\sb{31..02}}\) \(\leftarrow\) SR[EX_PC]\({\sb{31..02}}\)
+        \rawJxxZeroLowBits
+        SR[EX_BITS]\({\sb{30}}\) \(\leftarrow\) 1'b1
+\end{alltt}\rawInstrEnd
+
+\rawimminstrbasenolatency {IHDR}     {1 1 1 0 1}    {Create Internal Header} {1} {\RawTag} {0} {rs} {rt} {uimm16}
+\begin{alltt}
+                              [rt]\({\sb{31..29}}\) \(\leftarrow\) uimm16\({\sb{15..13}}\)
+                              [rt]\({\sb{28..24}}\) \(\leftarrow\) uimm16\({\sb{12..8}}\)
+                              [rt]\({\sb{23..20}}\) \(\leftarrow\) uimm16\({\sb{7..4}}\)
+                              [rt]\({\sb{19..15}}\) \(\leftarrow\) DN_YPOS\({\sb{4..0}}\)
+                              [rt]\({\sb{14..10}}\) \(\leftarrow\) DN_XPOS\({\sb{4..0}}\)
+                              [rt]\({\sb{09..05}}\) \(\leftarrow\) ([rs]\({\sb{4..0}}\) & GDN_XMASK\({\sb{4..0}}\)) + GDN_XADJ\({\sb{4..0}}\)
+                              [rt]\({\sb{04..00}}\) \(\leftarrow\) (([rs]\({\sb{11..0}}\) >> GDN_YSHIFT\({\sb{2..0}}\)) 
+                                           & GDN_YMASK\({\sb{4..0}}\))
+                                          + GDN_YADJ\({\sb{4..0}}\)
+
+
+
+
+
+
+\end{alltt}
+\pspicture*(-.2,-.4)(16,1.5)
+\mbtwordfieldgray{31}{0}{}%
+\mbtwordnohash%
+\mbtwordfieldnoh{31}{29}{3}{fbits}%
+\mbtwordfieldnoh{28}{24}{5}{length}%
+\mbtwordfieldnoh{23}{20}{4}{user}%
+\mbtwordfieldnoh{19}{15}{5}{src Y}%
+\mbtwordfieldnoh{14}{10}{5}{src X}%
+\mbtwordfieldnoh{9}{5}{5}{dest Y}%
+\mbtwordfieldnoh{4}{0}{5}{dest X}
+\endpspicture
+
+\psbezier[linestyle=solid]{<-|}(0.8,2.5)(1,7)(3,8.7)(5.4,8.7)%
+\psbezier[linestyle=solid]{<-|}(2.6,2.5)(1.25,6)(3.4,8.4)(5.4,8.3)%
+\psbezier[linestyle=solid]{<-|}(4.6,2.5)(4,3.5)(0,4.6)(5.4,7.9)%
+\psbezier[linestyle=solid]{<-|}(6.6,2.5)(6,4.0)(1,4.4)(5.4,7.5)%
+\psbezier[linestyle=solid]{<-|}(9,2.5)(8,4.5)(2,4.2)(5.4,7.0)%
+\psbezier[linestyle=solid]{<-|}(11.2,2.5)(10,5)(3,4.0)(5.4,6.6)%
+\psbezier[linestyle=solid]{<-|}(13.5,2.5)(13.6,3.5)(13.3,4.5)(10.3,5.3)%
+\rawInstrEnd
+
+\rawldinstr                {ILW}     {0 0 0 0 1}    {Instruction Load Word}               {2}{5} {\RawTag}
+\begin{alltt}
+        ea\(\sb{31..2}\) \hspace{.25mm} \(\leftarrow\) \{ [base] + ({\em{sign-extend-16-to-32}} soffs16) \}\(\sb{31..2}\)
+        ea\(\sb{1..0}\)   \(\leftarrow\) 0
+        [rt]  \hspace{1mm} \(\leftarrow\) ({\em{proc-imem-load}} ea)
+\end{alltt}
+The additional cycle of occupancy is a cycle stolen from the fetch unit on access.
+\rawInstrEnd
+
+\rawCOMMzzz {INTOFF}      {0 0 0 0 0 1} {Disable System Interrupts}   {1}   {\RawTag}
+\begin{alltt}
+        SR[EX_BITS]\({\sb{30}}\) \(\leftarrow\) 1'b0
+\end{alltt}\rawInstrEnd
+
+\rawCOMMzzz {INTON}      {0 0 1 0 0 1} {Enable System Interrupts}   {1}   {\RawTag}
+\begin{alltt}
+        SR[EX_BITS]\({\sb{30}}\) \(\leftarrow\) 1'b1
+\end{alltt}\rawInstrEnd
+
+\rawstinstr                {ISW}     {0 1 0 0 1}    {Instruction Store Word}               {2} {\RawTag}
+\begin{alltt}
+        ea\(\sb{31..2}\) \hspace{.25mm} \(\leftarrow\) \{ [base] + ({\em{sign-extend-16-to-32}} soffs16) \}\(\sb{31..2}\)
+        ea\(\sb{1..0}\)   \(\leftarrow\) 0
+        ({\em{proc-imem-store}} ea [rt])
+\end{alltt}
+Steals one fetch cycle from compute processor fetch unit.
+\rawInstrEnd
+
+\rawCOMMbase {MFEC}      {0 1 0 0 1 0} {Move From Event Counter}   {1}   {\RawTag} {rs}{0 0 0 0 0}{rd}
+\begin{alltt}
+        [rd]\({\sb{31..00}}\) \(\leftarrow\) EC[rs]
+\end{alltt}
+
+Note: MFEC captures its value in the RF stage. This is because
+the event counters are located physically quite distant from
+the bypass paths of the processor, so the address is transmitted
+in RF, and the output given in EXE. For example,
+
+\begin{alltt}
+        lw $0,4($0)             # cache miss in TV stage, pipeline frozen
+        nop                     # occupies TL stage
+        mfec $4, EC_CACHE_MISS  # EXE stage -- will not register cache miss
+        mfec $4, EC_CACHE_MISS  # RF        -- will register cache miss
+\end{alltt}
+
+Additionally, there is one cycle of lag between when the event actually occurs
+and when the event counter is updated. For example, assuming no outside stalls
+like cache misses or interrupts, 
+
+\begin{alltt}
+        mtec EC_xxx, $4         # write an event counter
+        mfec $5, EC_xxx         # reads old value
+        mfec $5, EC_xxx         # reads new value $
+\end{alltt}
+
+\rawInstrEnd
+
+\rawCOMMbase {MFSR}      {0 1 0 0 0 0} {Move From Status / Control Register}   {1}   {\RawTag} {rs}{0 0 0 0 0}{rd}
+\begin{alltt}
+        [rd]\({\sb{31..00}}\) \(\leftarrow\)  SR[rs]
+\end{alltt}
+
+Section~\ref{sec:status} describes the status registers.
+
+\rawInstrEnd
+
+\rawCOMMbaseAlt {MLK}      {0 0 0 0 0 1} {MDN Lock}   {v}   {\RawTagH} {0 0 0 0 0}{0 0 0 0 0}{ uimm5 }
+\begin{alltt}
+        SR[EX_BITS]\({\sb{30}}\) \(\leftarrow\) 1'b0;
+        ({\em{icache-prefetch}} PC uimm5)
+\end{alltt}
+
+Signals to hardware or software caching system that the following \rawinstr{uimm5} cache lines
+needs to be resident in the instruction cache for correct execution to occur. Disables interrupts.
+This allows instruction sequences to access the memory network without concern that the i-caching system
+will also access it. 
+
+\rawInstrEnd
+
+\rawCOMMbaseAlt {MUNLK}      {0 0 1 0 0 1} {MDN Unlock}   {v}   {\RawTagH} {0 0 0 0 0}{0 0 0 0 0}{0 0 0 0 0}
+\begin{alltt}
+        SR[EX_BITS]\({\sb{30}}\) \(\leftarrow\) 1'b1
+\end{alltt}
+
+Marks end of MDN-locked region. Enables interrupts.
+
+\rawInstrEnd
+
+\rawCOMMbase {MTEC}      {0 1 0 0 1 1} {Move To Event Counter}   {1}   {\RawTag} {rs}{rt}{0 0 0 0 0}
+\begin{alltt}
+        EC[rt] \(\leftarrow\) [rs]\({\sb{31..00}}\)
+\end{alltt}\rawInstrEnd
+
+\rawCOMMbase {MTSR}      {0 1 0 0 0 1} {Move To Status / Control Register}   {1}   {\RawTag} {rs}{rt}{0 0 0 0 0}
+\begin{alltt}
+        SR[rt] \(\leftarrow\) [rs]\({\sb{31..00}}\)
+\end{alltt}
+
+Section~\ref{sec:status} describes the status registers. Note that not 
+all status register bits are fully writable, so some bits may not be updated
+as a result of an \rawinstr{MTSR} instruction. 
+\rawInstrEnd
+
+\rawimminstrbasenolatency {MTSRi}     {1 1 1 0 0}    {Move to Status / Control Immediate} {1} {\RawTag} {0} {0 0 0 0 0} {rt} {uimm16}
+\begin{alltt}
+        SR[rt]\({\sb{31..16}}\) \(\leftarrow\) 0;
+        SR[rt]\({\sb{15..00}}\) \(\leftarrow\) uimm16;
+\end{alltt}
+
+Section~\ref{sec:status} describes the status registers. Note that not 
+all status register bits are fully writable, so some bits may not be updated
+as a result of an \rawinstr{MTSR} instruction. 
+\rawInstrEnd
+
+\rawimminstrbasenolatency  {OHDR}     {0 1 1 1 0}    {Create Outside Header} {1} {\RawTag} {0} {rs} {rt} {uimm16}
+\begin{alltt}
+\hspace{.5mm}                              horiz \(\leftarrow\) [rs]\({\sb{31}}\)
+\hspace{.5mm}                              side  \(\leftarrow\) [rs]\({\sb{30}}\) & MDN_EXTEND
+\hspace{.5mm}                              bits  \(\leftarrow\) MDN_EXTEND ? [rs]\({\sb{29..25}}\) : [rs]\({\sb{30..26}}\)
+ 
+                              [rt]\({\sb{31..29}}\) \(\leftarrow\) side ? 0 
+                                               : (horiz ? MDN_YMAX : MDN_XMAX);
+                              [rt]\({\sb{28..24}}\) \(\leftarrow\) uimm16\({\sb{12..8}}\)
+                              [rt]\({\sb{23..20}}\) \(\leftarrow\) uimm16\({\sb{7..4}}\)
+                              [rt]\({\sb{19..15}}\) \(\leftarrow\) DN_YPOS\({\sb{4..0}}\)
+                              [rt]\({\sb{14..10}}\) \(\leftarrow\) DN_XPOS\({\sb{4..0}}\)
+                              [rt]\({\sb{09..05}}\) \(\leftarrow\) horiz ? (side ? 0 : MDN_YMAX) 
+                                                : (bits >> MDN_YSHIFT)
+                              [rt]\({\sb{04..00}}\) \(\leftarrow\) horiz ? (bits >> MDN_XSHIFT) 
+                                                : (side ? 0 : MDN_XMAX)
+
+
+
+
+
+\end{alltt}
+\pspicture*(-.2,-.4)(16,1.5)
+\mbtwordfieldgray{31}{0}{}%
+\mbtwordnohash%
+\mbtwordfieldnoh{31}{29}{3}{fbits}%
+\mbtwordfieldnoh{28}{24}{5}{length}%
+\mbtwordfieldnoh{23}{20}{4}{user}%
+\mbtwordfieldnoh{19}{15}{5}{src Y}%
+\mbtwordfieldnoh{14}{10}{5}{src X}%
+\mbtwordfieldnoh{9}{5}{5}{dest Y}%
+\mbtwordfieldnoh{4}{0}{5}{dest X}
+\endpspicture
+
+\psbezier[linestyle=solid]{<-|}(0.8,2.5)(1,7)(3,8.7)(5.4,8.7)%
+\psbezier[linestyle=solid]{<-|}(2.6,2.5)(1.25,6)(3.4,8.4)(5.4,7.9)%
+\psbezier[linestyle=solid]{<-|}(4.6,2.5)(4,3.5)(0,4.6)(5.4,7.5)%
+\psbezier[linestyle=solid]{<-|}(6.6,2.5)(6,4.0)(1,4.4)(5.4,7.0)%
+\psbezier[linestyle=solid]{<-|}(9,2.5)(8,4.5)(2,4.2)(5.4,6.6)%
+\psbezier[linestyle=solid]{<-|}(11.2,2.5)(10,5)(3,4.0)(5.4,6.2)%
+\psbezier[linestyle=solid]{<-|}(13.5,2.5)(13.6,3.5)(13.3,4.5)(13.1,4.7)%
+
+\rawinstr{OHDR} takes an address and an immediate field and produces a header suitable for injecting into the MDN.
+The immediate field specifies the \rawinstr{user} and \rawinstr{length} fields of the message header.
+\rawinstr{OHDR} maps the address to an I/O port, which effectively wraps the address space around
+the periphery of the chip. Raw's hardware data cache uses a private copy of this logic
+to implement Raw's {\em memory hash function}. %(See Section~\ref{sec:qtm-mem}.)
+
+\rawInstrEnd
+
+\rawstinstr                {OHDRX}     {0 1 1 1 1}    {Create Outside Header; Disable System Interrupts}               {1} {\RawTag}
+\begin{alltt}
+\hspace{.5mm}                              horiz \(\leftarrow\) [rs]\({\sb{31}}\)
+\hspace{.5mm}                              side  \(\leftarrow\) [rs]\({\sb{30}}\) & MDN_EXTEND
+\hspace{.5mm}                              bits  \(\leftarrow\) MDN_EXTEND ? [rs]\({\sb{29..25}}\) : [rs]\({\sb{30..26}}\)
+
+\hspace{.5mm}                              SR[EX_BITS]\({\sb{30}}\) \(\leftarrow\) 1'b0
+
+                              [rt]\({\sb{31..29}}\) \(\leftarrow\) side ? 0 
+                                               : (horiz ? MDN_YMAX : MDN_XMAX);
+                              [rt]\({\sb{28..24}}\) \(\leftarrow\) uimm16\({\sb{12..8}}\)
+                              [rt]\({\sb{23..20}}\) \(\leftarrow\) uimm16\({\sb{7..4}}\)
+                              [rt]\({\sb{19..15}}\) \(\leftarrow\) DN_YPOS\({\sb{4..0}}\)
+                              [rt]\({\sb{14..10}}\) \(\leftarrow\) DN_XPOS\({\sb{4..0}}\)
+                              [rt]\({\sb{09..05}}\) \(\leftarrow\) horiz ? (side ? 0 : MDN_YMAX) 
+                                                : (bits >> MDN_YSHIFT)
+                              [rt]\({\sb{04..00}}\) \(\leftarrow\) horiz ? (bits >> MDN_XSHIFT) 
+                                                : (side ? 0 : MDN_XMAX)
+
+
+
+
+
+\end{alltt}
+\pspicture*(-.2,-.4)(16,1.5)
+\mbtwordfieldgray{31}{0}{}%
+\mbtwordnohash%
+\mbtwordfieldnoh{31}{29}{3}{fbits}%
+\mbtwordfieldnoh{28}{24}{5}{length}%
+\mbtwordfieldnoh{23}{20}{4}{user}%
+\mbtwordfieldnoh{19}{15}{5}{src Y}%
+\mbtwordfieldnoh{14}{10}{5}{src X}%
+\mbtwordfieldnoh{9}{5}{5}{dest Y}%
+\mbtwordfieldnoh{4}{0}{5}{dest X}
+\endpspicture
+
+\psbezier[linestyle=solid]{<-|}(0.8,2.5)(1,7)(3,8.7)(5.4,8.7)%
+\psbezier[linestyle=solid]{<-|}(2.6,2.5)(1.25,6)(3.4,8.4)(5.4,7.9)%
+\psbezier[linestyle=solid]{<-|}(4.6,2.5)(4,3.5)(0,4.6)(5.4,7.5)%
+\psbezier[linestyle=solid]{<-|}(6.6,2.5)(6,4.0)(1,4.4)(5.4,7.0)%
+\psbezier[linestyle=solid]{<-|}(9,2.5)(8,4.5)(2,4.2)(5.4,6.6)%
+\psbezier[linestyle=solid]{<-|}(11.2,2.5)(10,5)(3,4.0)(5.4,6.2)%
+\psbezier[linestyle=solid]{<-|}(13.5,2.5)(13.6,3.5)(13.3,4.5)(13.1,4.7)%
+
+\rawinstr{OHDRX} takes an address and an immediate field and produces a header suitable for injecting into the MDN.
+The immediate field specifies the \rawinstr{user} and \rawinstr{length} fields of the message header.
+\rawinstr{OHDRX} maps the address to an I/O port, which effectively wraps the address space around
+the periphery of the chip.   Since the MDN must be accessed
+with interrupts disabled, \rawinstr{OHDRX} provides a cheap way of doing this.
+Raw's hardware data cache uses a private copy of this logic
+to implement Raw's {\em memory hash function}. %(See Section~\ref{sec:qtm-mem}.) 
+\rawInstrEnd
+
+\rawCOMMbase {PWRBLK}      {1 0 0 0 0 0} {Power Block}   {1+}   {\RawTag} {0 0 0 0 0}{0 0 0 0 0}{rd}
+\begin{alltt}
+        [rd]\({\sb{31}}\) \hspace{.75mm}  \(\leftarrow\) \textrm{data available in cgni}
+        [rd]\({\sb{30..13}}\) \(\leftarrow\) 0;
+        [rd]\({\sb{12}}\) \hspace{.75mm}  \(\leftarrow\) \textrm{data available in cNi}
+        [rd]\({\sb{11}}\) \hspace{.75mm}  \(\leftarrow\) \textrm{data available in cEi}
+        [rd]\({\sb{10}}\) \hspace{.75mm}  \(\leftarrow\) \textrm{data available in cSi}
+        [rd]\({\sb{9}}\)  \hspace{.25mm}  \(\leftarrow\) \textrm{data available in cWi}
+        [rd]\({\sb{8}}\)  \hspace{.25mm}  \(\leftarrow\) \textrm{data available in csti}
+        [rd]\({\sb{7}}\)  \hspace{.25mm}  \(\leftarrow\) \textrm{data available in cNi2}
+        [rd]\({\sb{6}}\)  \hspace{.25mm}  \(\leftarrow\) \textrm{data available in cEi2}
+        [rd]\({\sb{5}}\)  \hspace{.25mm}  \(\leftarrow\) \textrm{data available in cSi2}
+        [rd]\({\sb{4}}\)  \hspace{.25mm}  \(\leftarrow\) \textrm{data available in cWi2}
+        [rd]\({\sb{3}}\)  \hspace{.25mm}  \(\leftarrow\) \textrm{data available in csti2}
+        [rd]\({\sb{2}}\)  \hspace{.25mm}  \(\leftarrow\) \textrm{data available in cmni}
+        [rd]\({\sb{1}}\)  \hspace{.25mm}  \(\leftarrow\) \textrm{timer interrupt went off}
+        [rd]\({\sb{0}}\)  \hspace{.25mm}  \(\leftarrow\) \textrm{external interrupt went off}
+
+\end{alltt}
+Stalls in RF stage until output is non-zero.
+\rawInstrEnd
+
+\rawldinstr                {SWLW}     {0 0 1 0 1}    {Switch Load Word}               {1}{5} {\RawTag}
+\begin{alltt}
+        ea\(\sb{31..2}\) \hspace{.25mm} \(\leftarrow\) \{ [base] + ({\em{sign-extend-16-to-32}} soffs16) \}\(\sb{31..2}\)
+        ea\(\sb{1..0}\)   \(\leftarrow\) 0
+        [rt]  \hspace{1mm} \(\leftarrow\) ({\em{static-router-imem-load}} ea)
+\end{alltt}
+Steals one fetch cycle from static router.
+\rawInstrEnd
+
+\rawstinstr                {SWSW}     {0 1 1 0 1}    {Switch Store Word}               {1} {\RawTag}
+\begin{alltt}
+        ea\(\sb{31..2}\) \hspace{.25mm} \(\leftarrow\) \{ [base] + ({\em{sign-extend-16-to-32}} soffs16) \}\(\sb{31..2}\)
+        ea\(\sb{1..0}\)   \(\leftarrow\) 0
+        ({\em{static-router-imem-store}} ea [rt])
+\end{alltt}
+Steals one fetch cycle from static router.
+\rawInstrEnd
+
+\rawCOMMzzz {UINTOFF}      {0 0 0 0 1 0} {Disable User Interrupts}   {1}   {\RawTag}
+\begin{alltt}
+        SR[EX_BITS]\({\sb{31}}\) \(\leftarrow\) 1'b0;
+\end{alltt}\rawInstrEnd
+
+\rawCOMMzzz {UINTON}      {0 0 1 0 1 0} {Enable User Interrupts}   {1}   {\RawTag}
+\begin{alltt}
+        SR[EX_BITS]\({\sb{31}}\) \(\leftarrow\) 1'b1;
+\end{alltt}\rawInstrEnd
+
+\newpage
+\standardstretch
+\subsection{Cache Management in Raw and RawH}
+\label{subsec:cache-management}
+
+Because Raw's memory model is shared memory but not hardware cache-coherent, effective
+and fast software cache management instructions are essential. One tile may modify a 
+data structure through its caching system, and then want to make it available to a consuming tile or I/O device. 
+To accomplish this in a cache-coherent way, the sender tile must explicitly flush and/or invalidate the
+data, and then send an MDN Relay message that bounces off the relevant DRAM I/O Port
+(indicating that all of the memory accesses have reached the DRAM) to the consumer. The
+consumer then knows that the DRAM has been updated with the correct values.
+
+To provide effective cache management, there are two series of cache management instructions.
+Both series allow cache lines to be flushed and/or invalidated.
+The first series, \rawinstr{ainv}, \rawinstr{afl}, and \rawinstr{aflinv}, takes as input a data address.
+This address, if it is resident in the cache, is translated into a $<$set, line$>$ which is used to
+identify the physical cache line.
+The second series of instructions, \rawinstr{tagsw}, \rawinstr{taglv}, \rawinstr{tagla}, and \rawinstr{tagfl}, takes
+a $<$set, line$>$ pair directly.
+
+The address-based instructions are most effective when the range of addresses residing in the cache is relatively
+small. If $|A|$ is the size of the address range that needs to be flushed, this series can flush
+the range in time $\theta(|A|)$.
+
+The tag-based instructions are most effective when the processor needs to invalidate or flush
+large ranges of address space that exceed the cache size. In this case, the address range can
+be manipulated faster by using the tag-based instructions to
+scan the tags of the cache and selectively invalidate and/or flush the contents.  In this case, the operations
+can occur in $\theta(|C|)$, where $|C|$ is the size of the cache. The \rawinstr{tagla} and \rawinstr{taglv}
+operations allow the cache line tags to be inspected, \rawinstr{tagfl} can be used to flush the contents,
+and \rawinstr{tagsw} can be used to rewrite (or zero) the tags. Of course, the \rawinstr{tag}xxx series
+of instructions can accomplish more than simply flushing or invalidating. They provide an easy
+way to manipulate the cache state directly for verification purposes and boot-time cache initialization.
+
+% fixme mention replacement policy / MRU bits
+
+
+\vspace{5mm}
+\codestretch
+\rawCOMMcache {AINV}     {0 1 1 1 1 0} {Address Invalidate} {c} {\RawTag} {rs}{0 0 0 0 0}{0 0 0 0 0}
+\begin{alltt}
+         ea \(\leftarrow\) [rs] + (S << 14) + (AAAA << kDataCacheLineSize)
+
+         if ({\em{cache-contains}} ea)
+            TAGS[({\em{cache-get-tag}} ea)].valid \(\leftarrow\) 0    \# stall 4 cycles
+            
+\end{alltt}\rawInstrEnd
+
+\rawCOMMcache {AFL}     {0 1 1 1 0 0} {Address Flush} {c} {\RawTag} {rs}{0 0 0 0 0}{0 0 0 0 0}
+\begin{alltt}
+         ea \(\leftarrow\) [rs] + (S << 14) + (AAAA << kDataCacheLineSize)
+
+         if ({\em{cache-contains}} ea)
+         \{
+           <set,line> \(\leftarrow\) ({\em{cache-get-tag} ea})
+           TAGS[<set,line>].mru \(\leftarrow\) !set   
+
+           if (TAGS[<set,line>].dirty) 
+           \{
+              TAGS[<set,line>].dirty \(\leftarrow\) 0
+              ({\em{cache-copy-back}} <set,line>)    \# stall >= 13 cycles
+           \}
+           else
+              \# stall 5 cycles
+         \}
+\end{alltt}\rawInstrEnd
+
+\rawCOMMcache {AFLINV}     {0 1 1 1 0 1} {Address Flush and Invalidate} {c} {\RawTag} {rs}{0 0 0 0 0}{0 0 0 0 0}
+\begin{alltt}
+         ea \(\leftarrow\) [rs] + (S << 14) + (AAAA << kDataCacheLineSize)
+
+         if ({\em{cache-contains}} ea)
+         \{
+           <set,line> \(\leftarrow\) ({\em{cache-get-tag} ea})
+           if (TAGS[<set,line>].dirty) 
+           \{
+              TAGS[<set,line>].dirty \(\leftarrow\) 0
+              TAGS[<set,line>].valid \(\leftarrow\) 0
+              ({\em{cache-copy-back}} ea)    \# stall >= 13 cycles
+           \}
+           else
+              \# stall 5 cycles
+         \}
+\end{alltt}\rawInstrEnd
+
+% MBT fixme what is the real cost of a tagfl?
+\rawCOMMcache {TAGFL}     {0 1 1 0 0 1} {Tag Flush} {c} {\RawTag} {rs}{0 0 0 0 0}{0 0 0 0 0}
+\begin{alltt}
+         set \hspace{1mm}    \(\leftarrow\) [rs]\({\sb{14}}\) ^ S
+         line\({\sb{8..0}}\)  \(\leftarrow\) [rs]\({\sb{13..5}}\) + AAAA
+
+         if (TAGS[<set,line>].valid)
+         \{
+           TAGS[<set,line>].mru \(\leftarrow\) !set
+           if (TAGS[<set,line>].dirty) 
+           \{
+              TAGS[<set,line>].dirty \(\leftarrow\) 0
+              ({\em{cache-copy-back}} <set,line>)    \# stall >= 13 cycles
+           \}
+           else
+              \# stall 5 cycles
+         \}
+\end{alltt}\rawInstrEnd
+
+
+\rawCOMMcacheLat {TAGLA}     {0 1 1 0 1 0} {Tag Load Address} {3} {\RawTag} {rs}{0 0 0 0 0}{rd}
+\begin{alltt}
+         set \hspace{1mm}    \(\leftarrow\) [rs]\({\sb{14}}\) ^ S
+         line\({\sb{8..0}}\)  \(\leftarrow\) [rs]\({\sb{13..5}}\) + AAAA
+
+         [rd] \(\leftarrow\) \{ TAGS[<set,line>].addr\({\sb{17..00}}\) line\({\sb{8..0}}\) [rs]\({\sb{4..0}}\) \}
+\end{alltt}\rawInstrEnd
+
+\rawCOMMcacheLat {TAGLV}     {0 1 1 0 1 1} {Tag Load Valid} {3} {\RawTag} {rs}{0 0 0 0 0}{rd}
+\begin{alltt}
+         set \hspace{1mm}   \(\leftarrow\) [rs]\({\sb{14}}\) ^ S
+         line\({\sb{8..0}}\) \(\leftarrow\) [rs]\({\sb{13..5}}\) + AAAA
+
+         [rd] \(\leftarrow\) TAGS[<set,line>].valid
+\end{alltt}\rawInstrEnd
+
+\rawCOMMcache {TAGSW}     {0 1 1 0 0 0} {Tag Store Word} {1} {\RawTag} {rs}{rt}{0 0 0 0 0}
+\begin{alltt}
+         set \hspace{1mm}   \(\leftarrow\) [rs]\({\sb{14}}\) ^ S
+         line\({\sb{8..0}}\) \(\leftarrow\) [rs]\({\sb{13..5}}\) + AAAA
+
+         TAGS[<set,line>].valid\({\sb{0}}\)     \(\leftarrow\) [rt]\({\sb{18}}\)
+         TAGS[<set,line>].addr\({\sb{17..00}}\) \hspace{1.5mm} \(\leftarrow\) [rt]\({\sb{17..00}}\)
+         TAGS[<set,line>].dirty\({\sb{0}}\)     \(\leftarrow\) 0
+
+         Should not be issued the cycle after a load or store instruction
+         because of write-after-write hazards on the tag memory.
+\end{alltt}\rawInstrEnd
+\rawInstrListEnd
+
+\newpage
+%remove fancyhdr
+%\fancyfoot[LE,RO]{}
+\section{Semantic Helper Functions}
+\label{sec:semantic-helper-functions}
+This section gives the semantics of the helper-functions used in the previous section. This
+thesis uses little-endian bit-ordering exclusively.
+
+\codestretch
+\begin{alltt}
+w\(\sb{x..y}\)                             \(\longrightarrow\)   \textrm{Bits }x..y\textrm{, inclusive, of} w.
+                                       \textrm{If (}x < y\textrm{), the empty string.}
+
+\{ w z \}                          \(\longrightarrow\)   \textrm{Concatenate the bits of }w\textrm{ and }z\textrm{ together.}
+                                       w\textrm{ will occupy the more significant bits.}
+
+z\(\sp{n}\)                               \(\longrightarrow\)   {\textrm{Concatenate }}n{\textrm{ copies of }}z{\textrm{ together.}}
+
+({\em{sign-extend-16-to-32}} simm16)    \(\longrightarrow\)   \{ (simm16\(\sb{15}\))\(\sp{16}\) simm16\(\sb{15..00}\) \}
+({\em{sign-extend-26-to-30}} simm26)    \(\longrightarrow\)   \{ (simm26\(\sb{25}\))\(\sp{4}\)  simm26\(\sb{25..00}\) \}
+({\em{sign-extend-16-to-30}} simm16)    \(\longrightarrow\)   \{ (simm16\(\sb{15}\))\(\sp{14}\) simm16\(\sb{15..00}\) \}
+({\em{zero-extend-16-to-32}} uimm16)    \(\longrightarrow\)   \{ 0\(\sp{15..0}\) uimm16\(\sb{15..00}\) \}
+
+({\em{left-rotate}}  uimm32 ra)         \(\longrightarrow\)   \{ uimm32\(\sb{(31-ra)..0}\) uimm32\(\sb{31..(32-ra)}\)  \}
+({\em{right-rotate}} uimm32 ra)         \(\longrightarrow\)   \{ uimm32\(\sb{(ra-1)..0}\)  uimm32\(\sb{31..ra}\)     \}
+
+({\em{cache-contains}} addr)            \(\longrightarrow\)   \textrm{Returns 1 if valid cache line corresponding to} addr
+                             \hspace{.25mm}          \textrm{is in cache, otherwise 0}.
+
+({\em{cache-get-tag}} addr)             \(\longrightarrow\)   \textrm{Returns} <set,line> \textrm{pair corresponding to} addr
+                             \hspace{.25mm}          \textrm{in cache.}
+
+({\em{cache-copy-back}} tagid)             \(\longrightarrow\)   \textrm{Sends update message containing data}
+                             \hspace{.25mm}          \textrm{corresponding to} tagid \textrm{to owner DRAM.}
+
+({\em{cache-read-byte}} addr)           \(\longrightarrow\)   \textrm{Ensure cache line corresponding to} addr
+                             \hspace{.25mm}          \textrm{is in cache, return byte at} addr.
+
+({\em{cache-read-half-word}} addr)      \(\longrightarrow\)   \textrm{Ensure cache line corresponding to} addr
+                             \hspace{.25mm}          \textrm{is in cache, return half-word at} \{ addr\(\sb{31..1}\) 0\(\sp{1}\) \}.
+
+({\em{cache-read-word}} addr)           \(\longrightarrow\)   \textrm{Ensure cache line corresponding to} addr
+                             \hspace{.25mm}          \textrm{is in cache, return word at} \{ addr\(\sb{31..2}\) 0\(\sp{2}\) \}.
+
+({\em{cache-write-byte}} addr val)      \(\longrightarrow\)   \textrm{Ensure cache line corresponding to} addr
+                             \hspace{.25mm}          \textrm{is in cache, write} val\(\sb{7..0}\) \textrm{to} addr.
+
+({\em{cache-write-half-word}} addr val) \(\longrightarrow\)   \textrm{Ensure cache line corresponding to} addr
+                             \hspace{.25mm}          \textrm{is in cache, write} val\(\sb{15..0}\) \textrm{to} \{ addr\(\sb{31..1}\) 0\(\sp{1}\) \}.
+
+({\em{cache-write-word}} addr val)      \(\longrightarrow\)   \textrm{Ensure cache line corresponding to} addr
+                             \hspace{.25mm}          \textrm{is in cache, write} val\(\sb{31..0}\) \textrm{to} \{ addr\(\sb{31..2}\) 0\(\sp{2}\) \}.
+
+({\em{create-mask}} mb me z)            \(\longrightarrow\)   if (z)
+                                         if (me\(\sb{1..0}\) == 0b00) \{ mb\(\sb{4..0}\) me\(\sb{4..2}\) \}\(\sp{4}\)
+                                         if (me\(\sb{1..0}\) == 0b11)
+                                            \{ mb\(\sb{4}\)\(\sp{4}\) mb\(\sb{3}\)\(\sp{4}\) mb\(\sb{2}\)\(\sp{4}\) mb\(\sb{1}\)\(\sp{4}\) mb\(\sb{0}\)\(\sp{4}\) me\(\sb{4}\)\(\sp{4}\) me\(\sb{3}\)\(\sp{4}\) me\(\sb{2}\)\(\sp{4}\) \}
+                                       else
+                                         if (mb <=\(\sb{unsigned}\) me)
+                                            \{ 0\(\sp{31..(me+1)}\) 1\(\sp{me..mb}\) 0\(\sp{(mb-1)..0}\) \}
+                                         else
+                                            \{ 1\(\sp{31..(mb+1)}\) 0\(\sp{mb..me}\) 1\(\sp{(me-1)..0}\) \}
+
+                                       \textrm{The last line was a specification}
+                                       \textrm{bug as it does not generate every mask}
+                                       \textrm{with a single zero. A better version is:}
+
+                                            \{ 1\(\sp{31..(mb+1)}\) 0\(\sp{mb..me+1}\) 1\(\sp{(me)..0}\) \}
+\end{alltt}
+
+\begin{alltt}
+({\em{icache-prefetch}} addr lines)  \(\longrightarrow\)  \textrm{Ensure} lines \textrm{instruction cache lines following}
+                                   \textrm{cache line containing} addr \textrm{are resident in instruction cache.}
+
+({\em{static-router-imem-store}} addr data)  \(\longrightarrow\)  \textrm{Writes 32-bit value} data \textrm{into}
+                       \hspace{.25mm}                    \textrm{static router instruction cache at location} addr.
+
+({\em{static-router-imem-load}} addr data)   \(\longrightarrow\)  \textrm{Loads 32-bit value} data \textrm{from}
+                       \hspace{.25mm}                    \textrm{static router instruction cache at location} addr.
+
+({\em{proc-imem-store}} addr data)           \(\longrightarrow\)  \textrm{Writes 32-bit value} data \textrm{into}
+                       \hspace{.25mm}                    \textrm{static router instruction cache at location} addr.
+
+({\em{proc-imem-load}} addr data)            \(\longrightarrow\)  \textrm{Loads 32-bit value} data \textrm{from}
+                       \hspace{.25mm}                    \textrm{static router instruction cache at location} addr.
+\end{alltt}
+
+\newpage
+\section{Opcode Maps}
+\label{sec:opcode-maps}
+
+Below are opcode maps which document the allocation of instruction
+encoding space.
+\vspace{5mm}
+
+\hspace{-5mm}\begin{minipage}{6.0 in}
+\subsection{High-Level (``Opcode'') Map}
+
+(Instructions with bits 31..29 set to 1 are predicted taken.)
+Bang instructions all have bit 31 set. however RLM, RLMI and RLVM
+use bit 28 to indicate bang.
+\vspace{5mm}
+
+\begin{tabular}{|c||c|c|c|c|c|c|c|c|} \hline
+bits  \zT & \multicolumn{8}{|c|}{bits 28..26}                                                           \\ \cline{2-9}
+31..29 & 000         & 001      & 010      & 011       & 100     & 101    & 110        & 111   \zT  \\ \hline \cline{2-9}
+111 & {\bf REGIMM+}  & BNEA+    & BNE+     & BEQ+      & BL      & BLAL   & JNEL+      & JEQL+  \zT \\
+110 & LB!            & LBU!     & LH!      & LHU!      & LW!     & SLTIU! & SLTI!      & ADDIU! \zT \\
+101 & RLM            & RLMI     & RLVM     &           & RLM!    & RLMI!  & RLVM!      &        \zT \\
+100 & {\bf SPECIAL!} & ILW!     & ORI!     & XORI!     & ANDI!   & SWLW!  & {\bf FPU!} & AUI!   \zT \\
+011 & {\bf REGIMM-}  & BNEA-    & BNE-     & BEQ-      & MTSRI   & IHDR   & JNEL-      & JEQL-  \zT \\
+010 & LB             & LBU      & LH       & LHU       & LW      & SLTIU  & SLTI       & ADDIU  \zT \\
+001 & SB             & ISW      & SH       & {\bf COM} & SW      & SWSW   & OHDR       & OHDRX  \zT \\
+000 & {\bf SPECIAL}  & ILW      & ORI      & XORI      & ANDI    & SWLW   & {\bf FPU}  & AUI    \zT \\ \hline
+\end{tabular}
+\vspace{15mm}
+\end{minipage}
+
+\hspace{-5mm}\begin{minipage}{6.0 in}
+\subsection{SPECIAL Submap}
+
+(Applies when bits 31..26 are SPECIAL or SPECIAL!)
+\vspace{5mm}
+
+% mbt note: ``subtract from'' instruction would be nice to have but I understand why it's not there
+\begin{tabular}{|c||c|c|c|c|c|c|c|c|} \hline
+bits  \zT & \multicolumn{8}{|c|}{bits 2..0}                                                           \\ \cline{2-9}
+5..3 & 000         & 001      & 010      & 011       & 100     & 101    & 110        & \zT 111    \\ \hline \cline{2-9}
+000 & SLL  & MAGIC    & SRL      & SRA       & SLLV    &        & SRLV       & SRAV   \zT \\
+001 & JR    & JALR     & JRHON    & JRHOFF    &         &        &            &       \zT \\
+010 & MFHI  & MTHI     & MFLO     & MTLO      & MFFD    & MTFD   &            &       \zT \\
+011 & MULLO & MULLU    & DIV      & DIVU      &         &        &            &       \zT \\
+100 &       & ADDU     &          & SUBU      & AND     & OR     & XOR        & NOR   \zT \\
+101 & MULHI & MULHU    & SLT      & SLTU      &         &        &            &       \zT \\
+110 &       &          &          &           &         &        &            &       \zT \\       
+111 & POPC  & CLZ      &          &           &         &        &            &       \zT \\ \hline
+\end{tabular}
+\vspace{15mm}
+\end{minipage}
+
+\hspace{-5mm}\begin{minipage}{6.0 in}
+\subsection{FPU Submap}
+
+(Applies when bits 31..26 are FPU or FPU!)
+\vspace{5mm}
+
+\begin{tabular}{|c||c|c|c|c|c|c|c|c|} \hline
+bits  \zT & \multicolumn{8}{|c|}{bits 2..0}                                                           \\ \cline{2-9}
+5..3 & 000   & 001      & 010      & 011       & 100     & 101    & 110        & 111   \zT  \\ \hline \cline{2-9}
+000  & ADD.s & SUB.s    & MUL.s    & DIV.s     &         & ABS.s  &            & NEG.s \zT  \\
+001  &       &          &          &           &         & TRUNC.s&            &       \zT  \\
+010  &       &          &          &           &         &        &            &       \zT  \\
+011  &       &          &          &           &         &        &            &       \zT  \\
+100  & CVT.s &          &          &           & CVT.w   &        &            &       \zT   \\
+101  &       &          &          &           &         &        &            &       \zT  \\
+110  & C.F   & C.UN     & C.EQ     & C.UEQ     & C.OLT   & C.ULT  & C.OLE      & C.ULE \zT  \\       
+111  & C.SF  & C.NGLE   & C.SEQ    & C.NGL     & C.LT    & C.NGE  & C.LE       & C.NGT \zT  \\ \hline
+\end{tabular}
+\vspace{15mm}
+\end{minipage}
+
+\hspace{-5mm}\begin{minipage}{6.0 in}
+\subsection{COM Submap}
+
+(Applies when bits 31..26 are COM)
+\vspace{5mm}
+
+\begin{tabular}{|c||c|c|c|c|c|c|c|c|} \hline
+bits \zT  & \multicolumn{8}{|c|}{bits 2..0}                                                           \\ \cline{2-9}
+5..3 & 000   & 001      & 010      & 011       & 100     & 101    & 110        & 111  \zT  \\ \hline \cline{2-9}
+000  & DRET  & INTOFF   & UINTOFF  & ERET      &         &        &            &      \zT   \\
+001  &       & INTON    & UINTON   &           &         &        &            &      \zT   \\
+010  & MFSR  & MTSR     & MFEC     & MTEC      &         &        &            &      \zT   \\
+011  & TAGSW & TAGFL    & TAGLA    & TAGLV     & AFL     & AFLINV & AINV       &      \zT   \\
+100  & PWRBLK&          &          &           &         &        &            &      \zT   \\
+101  &       &          &          &           &         &        &            &      \zT   \\
+110  &       &          &          &           &         &        &            &      \zT   \\       
+111  &       &          &          &           &         &        &            &      \zT   \\ \hline
+\end{tabular}
+\vspace{15mm}
+\end{minipage}
+
+\hspace{-5mm}\begin{minipage}{6.0 in}
+\subsection{REGIMM Submap}
+
+(Applies when bits 31..26 are REGIMM+ or REGIMM-.)
+Bit 20 indicates a link instruction, and bit 18 indicates an absolute jump.
+The conditions are mirrored across these axes when appropriate.
+\vspace{5mm}
+
+\begin{tabular}{|c||c|c|c|c|c|c|c|c|} \hline
+bits \zT  & \multicolumn{8}{|c|}{bits 18..16}                                            \\ \cline{2-9}
+20..19 & 000& 001      & 010      & 011       & 100     & 101    & 110        & 111   \zT \\ \hline \cline{2-9}
+00  & BLTZ  & BLEZ     & BGEZ     & BGTZ      &         &        &            &       \zT  \\
+01  &       &          &          &           & J       &        &            &       \zT  \\
+10  & BLTZAL&          & BGEZAL   &           & JLTZL   & JLEZL  & JGEZL      & JGTZL \zT  \\
+11  &       &          &          &           & JAL     &        &            &       \zT  \\ \hline
+\end{tabular}
+\vspace{15mm}
+\end{minipage}
+
+
+\newpage
+\section{Status and Control Registers}
+\label{sec:status}
+\begin{tabular}{|l|l|l|l|} \hline
+\# & \zT Status Reg Name & \zB R/W & Purpose \\ \hline \hline
+0  & SW\_FREEZE \zB     & RW  & Switch Processor is Frozen. [00] $\leftarrow$ (1 Frozen) (0 Running) \zT               \\ \hline
+1  & SW\_BUF1   \zB     & R   & \# of elements in static router crossbar 1  NIBs                     \zT                  \\ 
+   &                 &     & [22:20] number of elements in \rawnib{c21} ($\leq$ 4)\\
+   &                 &     & [19:17] number of elements in \rawnib{cNi} ($\leq$ 4)\\                          
+   &                 &     & [16:14] number of elements in \rawnib{cEi} ($\leq$ 4)\\
+   &                 &     & [13:11] number of elements in \rawnib{cSi} ($\leq$ 4)\\
+   &                 &     & [10:08] number of elements in \rawnib{cWi} ($\leq$ 4)\\
+   &                 &     & [07:05] number of elements in \rawnib{csti} ($\leq$ 4)\\
+   &                 &     & [04:00] number of elements in \rawnib{csto} ($\leq$ 8) \zB \\ \hline
+
+2  & SW\_BUF2        & R   & \# of elements in static router crossbar 2  NIBs                     \zT                  \\
+   &                 &     & [22:20] number of elements in \rawnib{c12} ($\leq$ 4)\\                
+   &                 &     & [19:17] number of elements in \rawnib{cNi$_2$} ($\leq$ 4)\\                          
+   &                 &     & [16:14] number of elements in \rawnib{cEi$_2$} ($\leq$ 4)\\
+   &                 &     & [13:11] number of elements in \rawnib{cSi$_2$} ($\leq$ 4)\\
+   &                 &     & [10:08] number of elements in \rawnib{cWi$_2$} ($\leq$ 4)\\
+   &                 &     & [07:05] number of elements in \rawnib{csti$_2$} ($\leq$ 4)\\
+   &                 &     & [04:00] number of elements in \rawnib{csto} ($\leq$ 8) \zB \\           \hline
+% mbt fixme: MDN_BUF nib names have not actually been specified, see diagram showing gdn crossbar
+3  & MDN\_BUF        & R   & \# of elements in MDN router NIBs                                   \zT                   \\
+   &                 &     & [19:17] number of elements in \rawnib{cNi}  ($\leq$ 4)\\             
+   &                 &     & [16:14] number of elements in \rawnib{cEi}  ($\leq$ 4)\\
+   &                 &     & [13:11] number of elements in \rawnib{cSi}  ($\leq$ 4)\\
+   &                 &     & [10:08] number of elements in \rawnib{cWi}  ($\leq$ 4)\\
+   &                 &     & [07:05] number of elements in \rawnib{cmni} ($\leq$ 4)\\
+   &                 &     & [04:00] number of elements in \rawnib{cmno} ($\leq$ 16) \zB \\ \hline             
+4  & SW\_PC          & RW  & Current PC of switch processor.          \zT \\
+   &                 &     &  Byte address aligned to eight-byte boundaries.    \\
+   &                 &     & Used primarily for context switching.                               \\
+   &                 &     &                                                                     \\ 
+   &                 &     & Generally, writing to this register is used for context-switching   \\
+   &                 &     & purposes. It should only be performed when the switch is \\
+   &                 &     & FROZEN or if the compute processor program knows absolutely         \\
+   &                 &     & that the switch is stalled at a known PC. Otherwise, the          \\
+   &                 &     & program can no longer assume the static ordering of operands \\ 
+   &                 &     & on the SON.    \\
+   &                 &     &                                                                     \\ 
+   &                 &     & Writing to this register causes a branch misprediction in the   \\
+   &                 &     & switch. Allow at least three cycles for corresponding instruction    \\
+   &                 &     & to be executed.                                                  \zB         \\ \hline
+5  & BR\_INCR        & RW  & Signed 32-bit increment value for BNEA instruction. \zT \\
+   &                 &     & Caller-saved.                                       \\  \hline
+\end{tabular}
+
+\newpage
+\label{sec:status-two}
+\hspace{-6.5mm}\begin{tabular}{|l|l|l|l|} \hline
+\# & \zT Status Reg Name & \zB     & Purpose                                                                \\ \hline \hline
+6  & EC\_DYN\_CFG\zB & RW  & Configuration for Event Counting of Dynamic Network events\zT \\
+   &                 &     & [30:28] Memory Network North (D=N) Configuration                   \\
+   &                 &     & [27:25] Memory Network East (D=E) Configuration                    \\
+   &                 &     & [24:22] Memory Network South (D=S) Configuration                   \\
+   &                 &     & [21:19] Memory Network West (D=W) Configuration                    \\
+   &                 &     & [18:16] Memory Network Proc (D=P) Configuration         \\
+   &                 &     & [14:12] Memory Network North (D=N) Configuration                   \\
+   &                 &     & [11:09] Memory Network East (D=E) Configuration                    \\
+   &                 &     & [08:06] Memory Network South (D=S) Configuration                   \\
+   &                 &     & [05:03] Memory Network West (D=W) Configuration                    \\
+   &                 &     & [02:00] Memory Network Proc (D=P) Configuration \zB         \\     \cline{3-4}
+   &                   \multicolumn{2}{|r}{}    &                                                              \\  
+   &                   \multicolumn{2}{|r}{Settings:} &                                                        \\ 
+   &                   \multicolumn{2}{|r}{}    &                                                              \\  
+   &                  \multicolumn{2}{|r}{0} & \# of cycles output port D wants to transmit but could not \\
+   &                   \multicolumn{2}{|r}{}      & \hspace{7mm} because neighbor tile's input buffer is full. \\
+   &                  \multicolumn{2}{|r}{1} & \# of words transmitted from input port D to output port P \\
+   &                  \multicolumn{2}{|r}{2} & \# of words transmitted from input port D to output port W \\
+   &                  \multicolumn{2}{|r}{3} & \# of words transmitted from input port D to output port S \\
+   &                  \multicolumn{2}{|r}{4} & \# of words transmitted from input port D to output port E \\
+   &                  \multicolumn{2}{|r}{5} & \# of words transmitted from input port D to output port N \\
+   &                  \multicolumn{2}{|r}{6} & \# of words transmitted from input port D \\
+   &                  \multicolumn{2}{|r}{7} & \# cycles input port D had data to transmit but was not able to \\
+   &                   \multicolumn{2}{|r}{}   &                                                              \\  \hline
+7  & WATCH\_VAL\zB   & RW  & \zT [31:00] 32-bit timer; increments each cycle                        \\ \hline
+8  & WATCH\_MAX\zB   & RW  & \zT [31:00] value to fire timer interrupt and then zero WATCH\_VAL     \\ \hline
+9  & WATCH\_SET\zT   & RW  & [00] zero WATCH\_VAL if \rawnib{cgno} is empty or a value was dequeued \\ 
+   &           \zB   &     & [01] zero WATCH\_VAL if processor issues an instruction                \\ \hline
+10 & CYCLE\_HI \zT   & RW  & \zB [31:00] high 32-bits of cycle counter                              \\  \hline
+   &                 &     &                                                                        \\ 
+11 & CYCLE\_LO       & RW  & [31:00] low 32-bits of cycle counter                                   \\ 
+   &                 &     &                                                                        \\
+   &                 &     & Note: To read the cycle counter efficiently, read CYCLE\_HI,           \\ 
+   &                 &     & then CYCLE\_LO, then subtract one from CYCLE\_LO.                      \\ 
+   &                 &     & Cycle counters are writable to make tests reproducible.                \\
+   &                 &     &                                                                        \\  \hline
+12 & EVENT\_CFG2\zT  & RW  & \zB [24:0] configures the set of events that causes \rawmodule{c\_trigger}       \\
+   &                 &     & event counters to be incremented. See~\ref{sec:event-counting}.        \\ \hline
+   &                 &     &                                                                        \\
+13 & GDN\_RF\_VAL    & RW  & [31:00] GDN refill value                                                      \\
+   &                 &     &                                                                               \\
+   &                 &     & When EX\_MASK[GDN\_REFILL] is enabled, a read from \cgno                      \\
+   &                 &     & will return GDN\_RF\_VAL, signal an interrupt by setting                      \\
+   &                 &     & EX\_BITS[GDN\_REFILL], and leave \rawnib{cgno} unchanged. This                 \\
+   &                 &     & allows \rawnib{cgno} to be virtualized, e.g. for context switches             \\ 
+   &                 &     & and deadlock recovery.                                                        \\
+   &                 &     &                                                                               \\ \hline
+\end{tabular}
+
+\newpage
+\label{sec:status-three}
+\hspace{-6.5mm}\begin{tabular}{|l|l|l|l|} \hline
+\# & \zT Status Reg Name & \zB     & Purpose                                                                \\ \hline \hline
+   &                 &     &                                                                               \\
+14 & GDN\_REMAIN     & RW  & [04:00] Number of words remaining to be sent to complete            \\
+   &                 &     & current message on \rawnib{cgno}. GDN\_COMPLETE interrupt fires     \\
+   &                 &     & when value transitions to zero. OS typically initializes            \\
+   &                 &     & this with GDN\_PENDING value to allow GDN messages                 \\
+   &                 &     & to complete when context switching.                                \\  
+   &                 &     &                                                                     \\  \hline
+15 & EX\_BASE\_ADDR  & RW\zT& [31:00] Pointer to beginning of exception vector table.         \\
+   &                 &     & Set to zero at boot time. Applies to {\bf RawH}.                  \\
+   &                 &     &                                                                     \\ \hline  
+   &                 &     &                                                                     \\ 
+16 & GDN\_BUF        & R   & \# of elements in GDN router NIBs                          \\
+   &                 &     &                                              \\
+   &                 &     & [24:20] GDN\_PENDING \\
+   &                 &     & \hspace{10mm}        number of elements ($\leq$ 31) that need        \\
+   &                 &     & \hspace{10mm}        to be sent to \rawnib{cgno} from processor \\
+   &                 &     & \hspace{10mm}        pipeline to complete current message. \\ 
+   &                 &     &                                              \\
+   &                 &     & \hspace{10mm}        Note this count does not include those instructions  \\
+   &                 &     & \hspace{10mm}        currently in the pipeline; the operating system \\
+   &                 &     & \hspace{10mm}        should flush the pipeline before reading this value. \\
+   &                 &     & \hspace{10mm}        The OS loads this value into the GDN\_REMAIN SPR \\
+   &                 &     & \hspace{10mm}        for the GDN\_PENDING interrupt to trigger on. \\
+   &                 &     &                                              \\
+   &                 &     & [19:17] number of elements ($\leq$ 4) in \rawnib{cNi}   \\                          
+   &                 &     & [16:14] number of elements ($\leq$ 4) in \rawnib{cEi}   \\
+   &                 &     & [13:11] number of elements ($\leq$ 4) in \rawnib{cSi}   \\
+   &                 &     & [10:08] number of elements ($\leq$ 4) in \rawnib{cWi}   \\
+   &                 &     & [07:05] number of elements ($\leq$ 4) in \rawnib{cgni}  \\
+   &                 &     & [04:00] number of elements ($\leq$ 16) in \rawnib{cgno} \\
+   &                 &     &                                              \\ \hline
+17 & GDN\_CFG        & RW  & General Dynamic Network Configuration                        \\
+   &                 &     &                                                              \\
+   &                 &     & [31:27] GDN\_XMASK - Masks X bits from an address            \\
+   &                 &     & [26:22] GDN\_YMASK - Masks Y bits from an address            \\
+   &                 &     & [21:17] GDN\_XADJ   - Adjusts from local to global X address \\
+   &                 &     & [16:12] GDN\_YADJ   - Adjusts from local to global Y address \\
+   &                 &     & [11:09] GDN\_YSHIFT - Gets Y bits from an address            \\
+   &                 &     &                                                              \\ 
+   &                 &     & See \rawinstr{IHDR} instruction.                             \\ 
+   &                 &     &                                                              \\ \hline
+\end{tabular}
+
+\newpage
+\label{sec:status-four}
+\hspace{-6.5mm}\begin{tabular}{|l|l|l|l|} \hline
+\# & Status Reg Name \zT &     & Purpose \zB                                              \\ \hline \hline
+   &                 &     &                                                              \\ 
+18 & STORE\_METER    & RW  & STORE\_ACK counters                                          \\
+   &                 &     &                                                              \\
+   &                 &     & [31:27] PARTNER\_Y - Y location of partner port              \\
+   &                 &     & [26:22] PARTNER\_X - X location of partner port              \\
+   &                 &     & [21] ENABLE - enable store meter-based stalls                \\
+   &                 &     & [10] DECREMENT\_MODE (see below; reads always zero)          \\
+   &                 &     & [9:5] COUNT\_PARTNER - \# of partner accesses left           \\
+   &                 &     & [4:0] COUNT\_NON\_PARTNER - \# of non-partner accesses left  \\  
+   &                 &     &                                                              \\ 
+   &                 &     & Since the counts are updated as STORE\_ACK messages are       \\
+   &                 &     & received over the MDN, care must be taken to update           \\
+   &                 &     & STORE\_METER in a way that avoids race conditions.            \\
+   &                 &     &                                                               \\
+   &                 &     & Ordinarily, the only way to do this is to modify the register \\
+   &                 &     & only when all store-acks have been received.                  \\
+   &                 &     &                                                               \\
+   &                 &     & Alternatively, the user may write to the register with        \\
+   &                 &     & DECREMENT\_MODE set; in this case the                        \\ 
+   &                 &     & COUNT\_NON\_PARTNER will be decremented if bit 0 is set, \\
+   &                 &     & and COUNT\_PARTNER will be decremented if bit 5 is set. \\
+   &                 &     & No other bits are changed. This handles the case where the    \\
+   &                 &     & user is directly transmitting memory packets over the MDN    \\
+   &                 &     & using explicit accesses to \rawnib{cmno}, and needs to update the \\
+   &                 &     & the STORE\_ACK counters to reflect this.                     \\
+   &                 &     &                                                              \\ \hline
+  &                 &     &                                                              \\ 
+19 & MDN\_CFG        & RW  & Memory Dynamic Network Configuration                        \\
+   &                 &     &                                                              \\
+   &                 &     & [31:27] DN\_XPOS - Absolute X position of tile in array      \\
+   &                 &     & [26:22] DN\_YPOS - Absolute Y position of tile in array      \\
+   &                 &     & [21:17] MDN\_XMAX   - X Coord of East-Most Tiles             \\
+   &                 &     & [16:12] MDN\_YMAX   - Y Coord of South-Most Tiles            \\
+   &                 &     & [11:09] MDN\_XSHIFT - Shift Amount X                         \\
+   &                 &     & [08:06] MDN\_YSHIFT - Shift Amount Y                         \\
+   &                 &     & [00:00] MDN\_EXTEND - Use all four edge of chip.             \\ 
+   &                 &     &                                                              \\ 
+   &                 &     & These SPRs are used to determine Raw's {\em memory hash function}  \\
+   &                 &     & as described in MBT's PhD thesis. This function \\
+   &                 &     & determines where the data caches send their messages for \\
+   &                 &     & cache fills and evictions. It also determines the functionality \\
+   &                 &     & of the \rawinstr{OHDR} and \rawinstr{OHDRX} instructions.       \\ 
+   &                 &     &                                                              \\ \hline
+20 & EX\_PC \zB      & RW  & PC where system-level exception occurred.              \zT   \\ \hline
+21 & EX\_UPC\zB      & RW  & PC where user-level exception occurred.                \zT   \\
+   & \zB             &     & (GDN\_AVAIL is the only user-level exception)          \zT   \\ \hline
+\end{tabular}
+
+\newpage
+\label{sec:status-five}
+\hspace{-6.5mm}\begin{tabular}{|l|l|l|l|} \hline
+\# & Status Reg Name & \zT     & Purpose \zB                                              \\ \hline \hline
+   &                 &     &                                                              \\
+22 & FPSR            & RW  & Floating Point Status Register                               \\
+   &                 &     & [5] Unimplemented                                            \\
+   &                 &     & [4] Invalid                                                  \\
+   &                 &     & [3] Divide by Zero                                           \\
+   &                 &     & [2] Overflow                                                 \\
+   &                 &     & [1] Underflow                                                \\
+   &                 &     & [0] Inexact operation                                        \\
+   &                 &     &                                                              \\
+   &                 &     & These bits are sticky; i.e. floating point operations        \\
+   &                 &     & can set but cannot clear these bits. However, the user       \\
+   &                 &     & can freely change the bits via \rawinstr{MTSR} or \rawinstr{MFSR}. \\
+   &                 &     &                                                              \\
+   &                 &     & These flags are set the cycle after the floating point \\
+   &                 &     & instruction finishes execution; i.e., you need three nops \\
+   &                 &     & inbetween the last floating point operation and a \rawinstr{MFSR} \\
+   &                 &     & to read the correct value.                                      \\
+   &                 &     &                                                              \\ \hline
+23 & EVENT\_BITS \zB & R   & [15:0] the list of events that have triggered \zT                \\ \hline 
+   &                 &     &                                                              \\
+24 & EX\_BITS        & R   & Interrupt Status                                             \\
+   &                 &     & [31] USER - all user interrupts masked if 0                  \\
+   &                 &     & [30] SYSTEM - all interrupts masked if 0                     \\
+   &                 &     &                                                              \\
+   &                 &     & The above can be set/cleared using                           \\
+   &                 &     & \hspace{5mm} \rawinstr{inton}, \rawinstr{intoff}, \rawinstr{uinton}, \rawinstr{uintoff}. \\
+   &                 &     &                                                              \\
+   &                 &     & [6] EVENT\_COUNTER                                           \\
+   &                 &     & [5] GDN\_AVAIL                                               \\
+   &                 &     & [4] TIMER                                                    \\
+   &                 &     & [3] EXTERNAL                                                 \\
+   &                 &     & [2] TRACE                                                    \\
+   &                 &     & [1] GDN\_COMPLETE                                            \\
+   &                 &     & [0] GDN\_REFILL                                              \\
+   &                 &     &                                                              \\
+   &                 &     & For bits 0..6, a ``1'' indicates a request for a given       \\
+   &                 &     & interrupt occurred but that it has not yet been serviced.     \\ 
+   &                 &     &                                                              \\ \hline
+   &                 &     &                                                              \\
+25 & EX\_MASK        & RW  & Interrupt Mask                                               \\
+   &                 &     &                                                              \\
+   &                 &     & [6] EVENT\_COUNTER                                           \\
+   &                 &     & [5] GDN\_AVAIL                                               \\
+   &                 &     & [4] TIMER                                                    \\
+   &                 &     & [3] EXTERNAL                                                 \\
+   &                 &     & [2] TRACE                                                    \\
+   &                 &     & [1] GDN\_COMPLETE                                            \\
+   &                 &     & [0] GDN\_REFILL                                              \\
+   &                 &     &                                                              \\
+   & \zB             &     & A ''0'' indicates that the exception is suppressed.          \\ \hline
+\end{tabular}
+
+\newpage
+\label{sec:status-six}
+\hspace{-6.5mm}\begin{tabular}{|l|l|l|l|} \hline
+\# & Status Reg Name & \zT     & Purpose \zB                                              \\ \hline \hline
+   &                 &     &                                                              \\
+26 & EVENT\_CFG      & RW  & Event Counter Configuration                                  \\
+   &                 &     &                                                              \\
+   &                 &     & [31:16] Enables for events 16..0                             \\
+   &                 &     & [15:01] PC to profile (omit low two bits) for single mode    \\
+   &                 &     & [00]  $\leftarrow$ (1 Single Instruction Mode) \\
+   &                 &     & \hspace{10.25mm} (0 Global Instruction Mode)\\
+   &                 &     &                                                              \\ \hline
+   &                 &     &                                                              \\
+27 & POWER\_CFG      & RW  & Power Saving Configuration                                   \\
+   &                 &     &                                                              \\
+   &                 &     & [00] Disable comparator toggle-suppression                   \\
+   &                 &     & [01] Disable ALU toggle-suppression                          \\
+   &                 &     & [02] Disable FPU toggle-suppression                          \\
+   &                 &     & [03] Disable Multiplier toggle-suppression                   \\
+   &                 &     & [04] Disable Divider toggle-suppression                      \\
+   &                 &     & [05] Disable Data Cache toggle-suppression                   \\
+   &                 &     & [06] Enable Instruction Memory power saving                  \\
+   &                 &     & [07] Enable Data Memory power saving                         \\
+   &                 &     & [08] Enable Static Router Memory power saving                \\
+   &                 &     & [09] Disable \rawinstr{pwrblk} wake up after TIMER interrupt    \\
+   &                 &     & [10] Disable \rawinstr{pwrblk} wake up after EXTERNAL interrupt \\
+   &                 &     & [11] Timer wakeup pending on return to \rawinstr{pwrblk}        \\
+   &                 &     & [12] External wakeup pending on return to \rawinstr{pwrblk}     \\
+   &                 &     &                                                               \\
+   &                 &     & At reset, POWER\_CFG is set to zero.                          \\ 
+   &                 &     & Bits 11 and 12 are set by the processor if the corresponding  \\
+   &                 &     & interrupt is taken while waiting on a \rawinstr{pwrblk}.      \\
+   &                 &     &                                                               \\ \hline
+28 & TN\_CFG\zT      & W   & Test Network Configuration \zB                                \\ \hline
+29 & TN\_DONE\zT     & W   & Signal ``DONE'' on Test Network with value [31:0]\zB          \\
+30 & TN\_PASS\zT     & W   & Signal ``PASS'' on Test Network with value [31:0]\zB          \\
+31 & TN\_FAIL\zT     & W   & Signal ``FAIL'' on Test Network with value [31:0]\zB          \\ \hline
+
+\end{tabular}
+
+
+\newpage
+\section{Event Counting Support}
+\label{sec:event-counting}
+\standardstretch
+The event counters provide a facility to monitor, profile, and respond to events on a Raw tile.
+Each tile has a bank of 16 \rawmodule{c\_trigger} modules. Each \rawmodule{c\_trigger}
+has a 32-bit counter. These counters count down every time a particular event occurs.
+The EVENT\_CFG2 register is used to determine which events each \rawmodule{c\_trigger} responds to.
+When the counter transitions from 0 to -1, it will assert a line (the ``trigger'') which
+will hold steady until the user writes a new value into the counter. These triggers are visible
+in the EVENT\_BITS register, and are OR'd together to form the EX\_BITS EVENT\_COUNTER bit,
+which can cause an interrupt. When the trigger is asserted, the \rawmodule{c\_trigger} module
+ latches the PC (without the low zero bits)
+of the instruction that caused the event into bits [31:16] of the counter (the \rawinstr{rlm}
+instruction can be used to extract them efficiently). The \rawmodule{c\_trigger} module will continue
+to count down regardless of the setting of the trigger. Because the PC is stored in the high bits,
+there is a window of time in which subsequent events will not corrupt the captured PC. Note
+that if the event is not instruction related, the setting of the PC in the \rawmodule{c\_trigger}
+is undefined. The event counters can be both read and written by the user. There is typically a one
+cycle delay between when an event occurs and when an \rawinstr{mfec} instruction will observe it;
+there is also a delay of two cycles before an event trigger interrupt will fire.
+\vspace{5mm}
+
+\tablestretch
+\begin{tabular}{|l|l|c|l|l|} \hline
+\multicolumn{2}{|l}{\rawmodule{c\_trigger \#}} &                           &      \zB   &                                           \\ 
+\multicolumn{1}{|l}{} & \multicolumn{2}{l|}{EVENT\_CFG2}                & Function& Notes                                          \\ 
+\multicolumn{1}{|l}{} & \multicolumn{1}{l}{} &\multicolumn{1}{l|}{Stage}&          &             \zB                           \\ \hline\hline
+0  &  [25] $\leftarrow$ 0   &  @ \zT    & Cycle Count     & So handler can bound sampling window.          \\
+0  &  [25] $\leftarrow$ 1   &  F \zT   & Write Over Read & For poor man's shared memory support.          \\
+   &                        &              &                 & Detects when a resident cache line is marked   \\
+   &                        &      &                 & dirty by a \rawinstr{sw} to an odd address     \\
+   &                        &      &                 & for the first time.                            \\
+   &                        &      &                 &                                                \\
+   &                        &      &                 & Note: If the \rawinstr{sw} is preceded by      \\
+   &                        &      &                 & a \rawinstr{lw} / \rawinstr{sw} / \rawinstr{flush} \\
+   &                        &      &                 & this mechanism does not have the bandwidth to  \\
+   &                        &      &                 & verify the previous state of the bits. It will \\
+   &                        &      &                 & conservatively count it as an event.           \\ \hline
+1  &                        &  M\zT    & Cache Writebacks       & Includes flushes.          \\ \hline
+2  &                        &  M\zT    & Cache Fills            &                           \\ \hline
+3  &                        &  M\zT    & Cache Stall Cycles     & Total number of cycles that the backend of the      \\
+   &                        &        &                        & pipeline is frozen by the cache state machine.      \\ 
+   &                        &        &                        & Includes write-back and fill time, as well as time  \\ 
+   &                        &  \zB     &                        & stolen by non-dirty \rawinstr{flush} instructions.  \\ \hline
+4  &  [0] $\leftarrow$ 0    &  E\zT    & Cache Miss Ops         & Number of \rawinstr{flush}, \rawinstr{lw}, \rawinstr{sw} instructions issued. \\
+4  &  [0] $\leftarrow$ 1    &  E\zT   & FPU Ops                & Number of FPU instructions issued. \\ 
+   &                        &  \zB     &                        & Includes \rawinstr{.s} and \rawinstr{.w} instructions. \\ \hline
+\end{tabular}
+
+\newpage
+
+\vspace{-15mm}
+
+\hspace{-9.5mm}\begin{tabular}{|l|c|c|l|l|} \hline
+\multicolumn{2}{|l}{\rawmodule{c\_trigger \#}} &     \zB                      &         &                                           \\ 
+\multicolumn{1}{|l}{} & \multicolumn{2}{l|}{EVENT\_CFG2}                & Function& Notes                                          \\ 
+\multicolumn{1}{|l}{} & \multicolumn{1}{l}{} &\multicolumn{1}{l|}{Stage}&          &             \zB                           \\ \hline\hline
+5  &  [1] $\leftarrow$ 0   &  E \zT   & Possible Mispredicts & Conditional Jumps and Branches,          \\
+   &                       &    \zB   &                      & ERET, DRET, JR, JALR.                    \\ 
+5  \zB &  [1] $\leftarrow$ 1   &  E \zT   & Possible Mispredicts & Possible mispredicts due to wrong SBIT   \\
+\zB   &                       &          &                      & (i.e., only conditional jumps and branches) \\ \hline
+6\zB  &  [2] $\leftarrow$ 0   &  E \zT   & Actual Mispredicts & Branch mispredictions.                     \\
+6\zB  &  [2] $\leftarrow$ 1   &  E \zT   & Actual Mispredicts & Mispredictions due to wrong SBIT\zB \\ \hline
+7\zB  &                       &  @ \zT   & Switch Stalls      & On static router (Trigger captures static router PC)\zB \\ \hline
+8\zB  &                       &  @ \zT   & Possible Mispredicts & On static router (Trigger captures static router PC)\zB \\ \hline
+9\zB  &                       &  @ \zT   & Actual Mispredicts & On static router (Trigger captures static router PC)\zB \\ \hline
+10\zB  &                      &  @ \zT   & Pseudo Random LFSR & X\_next = (X $>>$ 1) $|$ (xor(X[31,30,10,0]) $<<$ 31) \zB \\ 
+ \zB   &                      &          &                    & Note: Sampling this more than once per 32 cycles \\
+ \zB   &                      &          &                    & produces highly correlated numbers. \\ \hline
+11\zB  & [3] &  R \zT   & Functional Unit Stalls   & Stalls due to bypassing (e.g., the output \\
+ \zB   &                      &          &                    & of a preceding instruction is not available yet) \\ 
+ \zB   &                      &          &                    & or because of interlocks on the fp/int dividers. \\ \hline
+11\zB  & [4]   &  @ \zT   & GP                 & GDN Processor Port Counting  \\ \hline
+11\zB  & [5]   &  @ \zT   & MP                 & MDN Processor Port Counting  \\ \hline
+11\zB  & [23]   &  @ \zT  & Instructions Issued      & \# of instructions that enter Execute stage.   \\ \hline
+12\zB & [6]   &  R \zT   & Non-cache stalls   & \# of stalls not due to cache misses.   \\ 
+\zB &                      &          &                    & Includes \rawinstr{ilw}/\rawinstr{isw}; if trigger fires on isw/ilw  \\
+\zB &                      &          &                    & PC will be the PC of the instruction in the    \\    
+\zB &                      &          &                    & RF stage, rather than the \rawinstr{ilw}/\rawinstr{isw} instruction.  \\ \hline
+12\zB  & [7]   &  @ \zT   & GW                 & GDN West Port Counting  \\ \hline
+12\zB  & [8]   &  @ \zT   & MW                 & MDN West Port Counting  \\ \hline
+13\zB  & [9]   &  R \zT   & \rawinstr{ilw}/\rawinstr{isw} & \# of \rawinstr{ilw}/\rawinstr{isw} instructions issued. \\ \hline
+13\zB  & [10]   &  @ \zT  & GS                 & GDN South Port Counting \\ \hline
+13\zB  & [11]   &  @ \zT  & MS                 & MDN South Port Counting \\ \hline
+13\zB  & [24]   &  @ \zT  & Instructions Issued      & \# of instructions that enter Execute stage.   \\ \hline
+14\zB  & [12]   &  R \zT  & \csto\ stalls & Instruction issue blocked on \csto\ full \\ \hline
+14\zB  & [13]   &  R \zT  & \cgno\ stalls & Instruction issue blocked on \cgno\ full \\ \hline
+14\zB  & [14]   &  R \zT  & \cmno\ stalls & Instruction issue blocked on \cmno\ full \\ \hline
+14\zB  & [15]   &  @ \zT  & GE                 & GDN East Port Counting \\ \hline
+14\zB  & [16]   &  @ \zT  & ME                 & MDN East Port Counting \\ \hline
+15\zB  & [17]   &  R \zT&  \csti\ stalls & Instruction issue blocked on \csti\ empty \\ \hline
+15\zB  & [18]   &  R \zT&  \cstii\ stalls & Instruction issue blocked on \cstii\ empty\\ \hline
+15\zB  & [19]   &  R \zT&  \cgni\ stalls & Instruction issue blocked on \cgni\ empty\\ \hline
+15\zB  & [20]   &  R \zT&  \cmni\ stalls & Instruction issue blocked on \cmni\ empty\\ \hline
+15\zB  & [15]   &  @ \zT  & GN                 & GDN North Port Counting \\ \hline
+15\zB  & [16]   &  @ \zT  & MN                 & MDN North Port Counting \\ \hline
+
+ \hline
+\end{tabular}
+
+\newpage
+
+\standardstretch
+The previous table describes the events that the \rawmodule{c\_trigger} modules can be
+configured to count. The EVENT\_CFG2 column specifies the bit number of EVENT\_CFG2 that
+must be set in order to enable counting of that event. 
+
+The low bits of EVENT\_CFG allow the user to count events that occurs
+on a particular instruction at a particular PC instead of across all PCs.
+For this ``single instruction mode'', EVENT\_CFG[0] is set to 1, and the PC
+to sample is placed into EVENT\_CFG[15:1]. In cases where the event does not
+have an associated main processor PC (marked with the ``@'' in the table),
+the EVENT\_CFG single instruction mode setting is ignored. The high bits
+of EVENT\_CFG selectively enable counting on a per event basis, but
+do not suppress existing triggers.
+
+The EVENT\_CFG2 SPR allows the user to configure the events that a particular
+\rawmodule{c\_trigger} module counts. In some cases multiple enabled events may be
+connected to the same trigger. In that case, the counters increments each cycle
+if any such enabled events has occurred. In some cases, there are nonsensical
+combinations that can be enabled (say GE and \csto\ stalls).
+
+The meaning of the GN, GE, GS, GW, GP, MN, ME, MS, MW, and MP events
+are configured by the EC\_DYN\_CFG status/control register. Each event
+corresponds to a network N (G = general, M = memory) and a 
+direction D (N=north, E=east, ...). The encodings are shown in the
+table in Section~\ref{sec:status}.
+
+\newpage
+\section{Exception Vectors}
+\label{sec:exception}
+\tablestretch
+\begin{tabular}{|l|l|l|l|}                            \hline
+\#\zB & Name                & Offset \zT   & Purpose                   \\ \hline
+0\zB & VEC\_GDN\_REFILL     &  0x00\zT  & Dynamic Refill Exception  \\ \hline
+1\zB & VEC\_GDN\_COMPLETE   &  0x10\zT  & GDN Send Is Complete      \\ \hline
+2\zB & VEC\_TRACE           &  0x20\zT  & Trace Interrupt           \\ \hline
+3\zB & VEC\_EXTERN          &  0x30\zT  & External Interrupt (MDN)  \\ \hline
+4\zB & VEC\_TIMER           &  0x40\zT  & Timer Exception           \\ \hline
+5\zB & VEC\_GDN\_AVAIL      &  0x50\zT  & Data Avail on GDN         \\ \hline
+6\zB & VEC\_EVENT\_COUNTERS &  0x60\zT  & Event Counter Interrupt   \\ \hline
+
+\end{tabular}
+
+\standardstretch
+
+\vspace{5mm}
+In the Raw architecture, the exception vectors are stored starting at offset zero in 
+instruction memory. In RawH, the exception vectors are stored relative to \rawinstr{SR[EX\_BASE\_ADDR]}.
+When an exception occurs, the processor starts fetching from the
+corresponding exception location. Thus, a TIMER exception would start fetching at address
+\rawinstr{SR[EX\_BASE\_ADDR] + 0x40}.
+
+Each exception has 4 contiguous instructions; this is enough
+to do a small amount of work; such as save a register, load a jump address, and branch there:
+
+\codestretch
+\begin{alltt}
+            sw $3, interrupt_save($gp)
+            lw $3, gdn_vec($gp)
+            jr $3
+\end{alltt}
+\standardstretch

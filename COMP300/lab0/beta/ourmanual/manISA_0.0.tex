@@ -1,0 +1,418 @@
+\documentclass{report}
+
+\usepackage{fancyhdr}
+\usepackage{enumitem} %allows enumerate resume
+\setlength{\headheight}{12pt}
+\pagestyle{fancy}
+
+%set-up page dimentions
+\usepackage[top=1.5 in, bottom = 1.5 in ,left = 1.5 in, right = 1.5in]{geometry}
+
+\setlength{\parskip}{12pt} % 12 pt = space between paragraphs
+\setlength{\parindent}{0pt} % 0 pt = indentation
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{ifthen}
+\usepackage{latexsym}
+\usepackage{graphicx}
+\usepackage{graphics}
+\usepackage{psfrag}
+\usepackage{graphpap}
+\usepackage{fullpage}
+\usepackage{array}
+\renewcommand{\P}{\text{P}}
+\newcommand{\C}{\text{C}}
+
+\usepackage{tabularx}
+
+\newcolumntype{L}[1]{>{\hsize=#1\hsize\raggedright\arraybackslash}X}%
+\newcolumntype{R}[1]{>{\hsize=#1\hsize\raggedleft\arraybackslash}X}%
+\newcolumntype{C}[1]{>{\hsize=#1\hsize\centering\arraybackslash}X}%
+
+% Allows hyperlinks if compiled with pdflatex
+\usepackage{hyperref}
+\hypersetup{colorlinks}
+\usepackage{color}
+\definecolor{darkred}{rgb}{0.5,0,0}
+\definecolor{darkgreen}{rgb}{0,0.5,0}
+\definecolor{darkblue}{rgb}{0,0,0.5}
+\hypersetup{ colorlinks,
+                linkcolor=darkblue,
+                filecolor=darkgreen,
+                urlcolor=darkblue,
+                citecolor=darkblue }
+%hyperlink example is: \href{http://www.google.com}{google}
+
+                %below command for reference
+\newcommand{\unorm}[1]{{\left|\left|#1\right|\right|_u}}
+\newcommand{\tester}[2]{{\begin{center}\begin{tabular}{c c} \\
+            #2 & b\\
+        c & #1 
+    \end{tabular}
+\end{center}}}
+
+\newcommand{\newRinstruction}[6]{{
+        \LARGE \textbf{#1}\normalsize \hspace{2cm} \textsc{#2} 
+        \vspace{.1cm}
+        \hrule
+        \vspace{-.8cm}
+        \begin{center}
+            \begin{tabularx}{1.0\textwidth}{  C{1}  C{1}  C{1}  C{1}  }\\
+                4 & 3 & 3 & 3\\
+                \hline
+                 \multicolumn{1}{|c}{#3} & \multicolumn{1}{|c}{#4}  &  \multicolumn{1}{|c|}{#5}  & \multicolumn{1}{c|}{#6} \\
+                \hline
+                 \multicolumn{1}{c}{12\hfill 9} & \multicolumn{1}{c}{8\hfill 6}  &  \multicolumn{1}{c}{5\hfill 3}  & \multicolumn{1}{c}{2\hfill 0} \\
+            \end{tabularx}
+        \end{center}
+}}
+
+\newcommand{\newSinstruction}[5]{{
+        \LARGE \textbf{#1}\normalsize \hspace{2cm} \textsc{#2} 
+        \vspace{.1cm}
+        \hrule
+        \vspace{-.6cm}
+        \begin{center}
+            \begin{tabularx}{1.0\textwidth}{  C{1}  C{1}  C{1}  }\\
+                4 & 3 & 6\\
+                \hline
+                 \multicolumn{1}{|c}{#3} & \multicolumn{1}{|c}{#4}  &  \multicolumn{1}{|c|}{#5}  \\
+                \hline
+                 \multicolumn{1}{c}{12\hfill 9} & \multicolumn{1}{c}{8\hfill 6}  &  \multicolumn{1}{c}{5\hfill 0} \\
+            \end{tabularx}
+        \end{center}
+}}
+
+
+
+
+\begin{document}
+\title{ISA Beta Release}
+\author{Marc Slaughter, Nicholas Otto\\
+University of San Diego\\
+Comp 300, Digital Hardware and Design\\
+Dr. Saturnino Garcia}
+\maketitle
+
+\chapter{Architecture Description}
+\section{Registers}
+The table of registers is as follows:
+\begin{center}
+    \begin{tabularx}{1.0\textwidth}{|L{1} L{1} L{1} |}
+        \hline 
+        Name        & Description & Notes\\
+        \hline
+        \$g0-7      & General Registers & Used for, suprise, general purposes\\
+        \$sp        & Stack Pointer     & Points to top of register stack\\
+        \$fp        & Function Pointer  & Stack to keep track of function returns\\
+        \$ch0-32    & Channel Registers & Special registers\\
+        \$l0-32      & Label Registers   & Initialized at beginning of program\\
+        \hline
+    \end{tabularx}
+\end{center}
+
+\section{Function call ABI}
+Function calls are implemented using stacks.  When making a function call
+\begin{verbatim}
+    TRAP    3, label
+\end{verbatim}
+the value of the program counter, PC, plus 13 is placed onto the function stack (indicated by \$fp).  \$fp is then incremented to point to the next open stack opsition.
+PC is then given the value associated with the label.  
+A call to return will set PC to the value popped off the function pointer stack.
+
+If the user would like to pass values, they must first push those values onto the general value stack, whose entry point is indicated by \$sp.  
+The called function must then pop the values it needs off of the stack.  With this method, the general registers can be overridden without risking overriding parameters.
+
+\section{Label initialization}
+Through some mechanism, for now we decided in the hardware, the hardware knows to read in the first 32 addressable locations in memory.  The label registers are populated in order by these values.  It is the assembler's job to ensure each the first 32 memory locations are the correct values.
+
+
+
+\section{Instructions}
+The instructions have been separated into two types, "R" or "regular" type instructions and "S" or "special" type instructions.  
+The distinction is analogous to, but not an exact replication of, the MIPS R and I type instructions.  
+\subsection{R Type Instructions}
+\begin{minipage}{1\linewidth}
+\newRinstruction{Instruction Name}{general description}{op code}{rs}{rt}{rd}
+\begin{description}
+    \item[Format]\hfill \\
+        The instruction calling format
+    \item[Description]\hfill \\
+        The instruction description
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newRinstruction{mul}{multiplication}{001}{rs}{rt}{rd}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{mul rd, rs, rt}
+    \item[RTL]\hfill \\
+        \texttt{R[rd] = lower34(R[rs] * R[rt])}
+    \item[Description]\hfill \\
+        Multiplies the general registers \texttt{rs} and  \texttt{rt} and sets the lower 34 bits of the result to \texttt{rd}.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newRinstruction{add}{addition}{0010}{rs}{rt}{rd}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{add rd, rs, rt}
+    \item[RTL]\hfill \\
+        \texttt{R[rd] = R[rs] + R[rt]}
+    \item[Description]\hfill \\
+        Adds the contents of general registers \texttt{rs} and \texttt{rt} and store the result in general register \texttt{rd}.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newRinstruction{sub}{subtraction}{0011}{rs}{rt}{rd}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{sub rd, rs, rt}
+    \item[RTL]\hfill \\
+        \texttt{R[rd] = R[rs] - R[rt]}
+    \item[Description]\hfill \\
+        Subtracts the contents of general registers \texttt{rs} and \texttt{rt} and store the result in general register \texttt{rd}.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newRinstruction{or}{logical or}{0100}{rs}{rt}{rd}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{or rd, rs, rt}
+    \item[RTL]\hfill \\
+        \texttt{R[rd] = R[rs] | R[rt]}
+    \item[Description]\hfill \\
+        Sets general register \texttt{rd} to the bitwise logical or of general registers \texttt{rs} and \texttt{rt}.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newRinstruction{nor}{logical nor}{0101}{rs}{rt}{rd}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{nor rd, rs, rt}
+    \item[RTL]\hfill \\
+        \texttt{R[rd] = \(\lnot\)(R[rs] | R[rt])}
+    \item[Description]\hfill \\
+        Flips the bits of general register \texttt{rd} after a normal \texttt{or} operation.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newRinstruction{sr}{shift right bitwise}{0110}{rs}{rt}{rd}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{sr rd, rs, rt}
+    \item[RTL]\hfill \\
+        \texttt{R[rd] = R[rs] >> shamt(R[rt]))}
+    \item[Description]\hfill \\
+        Bitwise shifts the contents of general register \texttt{rs} by the amount in \texttt{rt} and puts the result in general register \texttt{rd}.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newRinstruction{lw}{load word (34 bits)}{0111}{rs}{rt}{rd}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{lw rd, rs, rt}
+    \item[RTL]\hfill \\
+        \texttt{R[rd] = M[R[rs] + R[rt]]}
+    \item[Description]\hfill \\
+        Set general register \texttt{rd} to the value stored at memory location \texttt{rs + rt}.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newRinstruction{sw}{store word (34 bits)}{1000}{rs}{rt}{rd}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{sw rd, rs, rt}
+    \item[RTL]\hfill \\
+        \texttt{M[R[rs] + R[rt]] = R[rd]}
+    \item[Description]\hfill \\
+        Set value at memory location \texttt{rs + rt} to the value of \texttt{rd}.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newRinstruction{bne}{branch if not equal}{1001}{rs}{rt}{label}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{bne rs, rt, label}
+    \item[RTL]\hfill \\
+        \texttt{if(R[rs] != R[rt]): PC = PC + InstructionLength + R[label]}
+    \item[Description]\hfill \\
+        Checks to see if general registers \texttt{rs} and \texttt{rt} are not equal.  
+        If check returns true, the program counter is incremented an additional \texttt{R[label]} amount (which is taken from the label registers).
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newRinstruction{beq}{branch if equal}{1010}{rs}{rt}{label}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{beq rs, rt, label}
+    \item[RTL]\hfill \\
+        \texttt{if(R[rs] == R[rt]): PC = PC + InstructionLength + R[label]}
+    \item[Description]\hfill \\
+        Checks to see if general registers \texttt{rs} and \texttt{rt} are equal.  
+        If check returns true, the program counter is incremented an additional \texttt{R[label]} amount (which is taken from the label registers).
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newRinstruction{slt}{set if less than}{1011}{rs}{rt}{label}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{slt rd, rs, rt}
+    \item[RTL]\hfill \\
+        \texttt{if(R[rs] < R[rt]): R[rd] = 1}
+    \item[Description]\hfill \\
+        Checks to see if general register \texttt{rs} is less than \texttt{rt}.
+        If check returns true, then \texttt{R[rd] = 1}.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\subsection{S Type Instructions}
+
+\begin{minipage}{1\linewidth}
+\newSinstruction{Instruction}{description}{opcode}{rs}{rt}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{op rs, rt}
+    \item[RTL]\hfill \\
+    \item[Description]\hfill \\
+        The instruction description
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newSinstruction{j}{jump}{1100}{ls}{lt}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{j label}
+    \item[RTL]\hfill \\
+        \texttt{PC = PC + InstructionLength + R[ls] + R[lt]}
+    \item[Description]\hfill \\
+        Increments the program counter an additional \text{R[ls] + R[lt]} amount (taken from label registers).
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newSinstruction{set}{set to immediate}{1101}{rd}{immediate}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{set rd, immediate}
+    \item[RTL]\hfill \\
+        \texttt{R[rd] = immediate}
+    \item[Description]\hfill \\
+        Sets \texttt{R[rd]} to the literal (numerical) value of immediate.  Assembler will enforce the size of immediate to be 6 bits or less.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newSinstruction{sl}{shift left bitwise}{1110}{rd}{immediate}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{sl rd, immediate}
+    \item[RTL]\hfill \\
+        \texttt{R[rd] = R[rd] << immediate}
+    \item[Description]\hfill \\
+        Shifts the contents of \texttt{rd} left by immediate ammount.
+        Notice that 6 bits is more than enough to be able to shift the least significant bit to the most significant bit in a 34 bit scheme.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\subsection{TRAP instructions}
+A \texttt{TRAP} instruction signals the hardware that the next 3 bits after the opcode are a function designator.  The format is as follows:
+
+\begin{minipage}{1\linewidth}
+\newSinstruction{TRAP}{execute function designator}{1111}{func}{rt}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{TRAP func rt}
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newSinstruction{TRAP QUIT}{exit program}{1111}{000}{***}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{TRAP QUIT, rt}
+    \item[RTL]\hfill \\
+        \texttt{exit program, returns R[rt]}
+    \item[Description]\hfill \\
+        The instruction description
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newSinstruction{TRAP IN}{read from channel}{1111}{001}{ch}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{TRAP IN, ch}
+    \item[RTL]\hfill \\
+        \texttt{R[g0] = R[ch]}
+    \item[Description]\hfill \\
+        Stores into general register 0 the value from channel register ch.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newSinstruction{TRAP OUT}{write to channel}{1111}{010}{ch}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{TRAP OUT, ch}
+    \item[RTL]\hfill \\
+        R[ch] = R[g0]
+    \item[Description]\hfill \\
+        Sets the channel register \texttt{ch} to the contents of general register \texttt{g0}.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newSinstruction{TRAP CALL}{call function at label}{1111}{011}{label}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{TRAP CALL, label}
+    \item[Description]\hfill \\
+        Execute the function call ABI.  Destination is \texttt{label}.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newSinstruction{TRAP RET}{function return}{1111}{100}{***}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{TRAP RET}
+    \item[Description]\hfill \\
+        Execute the function return ABI.  Destination is the return of function pointer stack.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newSinstruction{TRAP PUSH}{push register onto stack}{1111}{101}{rs}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{TRAP PUSH, rs}
+    \item[Description]\hfill \\
+        Pushes a register value onto the register stack.  It is through this mechanism that values are passed to functions.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\begin{minipage}{1\linewidth}
+\newSinstruction{TRAP POP}{pop register from stack}{1111}{110}{rs}
+\begin{description}
+    \item[Format]\hfill \\
+        \texttt{TRAP POP}
+    \item[Description]\hfill \\
+        Pop a value from the register stack and put it into \texttt{rs}.
+\end{description}\vspace{1cm}
+\end{minipage}
+
+\end{document}

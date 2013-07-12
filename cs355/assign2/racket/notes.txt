@@ -1,0 +1,9 @@
+My thoughts on starting this in Racket
+
+Started with the stats functions, pretty straightforward, lots of parameters though... Can I use "global" variables that aren't defined in the function header?
+
+Random functions, no big deal.
+
+Figured out a way to sort both arrival and departure events (essentially the same thing, but they need to be distinct).  That was pretty cool, but semms a bit non-lispy.
+
+

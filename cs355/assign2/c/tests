@@ -1,0 +1,18 @@
+#from mrbook.org/tutorials/make/
+CC=gcc
+CFLAGS=-c -Wall 
+LDFLAGS= -lm
+SOURCES=test_suite.c random.c queue.c test_random.c test_queue.c
+OBJECTS=$(SOURCES:.c=.o)
+EXECUTABLE=runtest
+
+all: $(SOURCES) $(EXECUTABLE)
+
+$(EXECUTABLE): $(OBJECTS)
+	$(CC) $(OBJECTS) -o $@ $(LDFLAGS) 
+
+.c.o:
+	$(CC) $(CFLAGS) $< -o $@
+
+clean:
+	rm -rf *o 

@@ -1,0 +1,23 @@
+
+output branch_o,
+output branch_eq_o,
+output write_enable_o,						// write back? to gen register
+output [SEL_WIDTH-1 : 0] write_reg_o, 	//which register to write back to
+output [C_WIDTH-1 : 0] alu_control,		//which alu op
+output spec_reg_write_en_o,
+output label_reg_write_en_o,
+output fs_write_en_o,
+output gs_write_en_o,
+output mem_write_enable_o
+
+branch_o
+branch_eq_o
+write_enable_o
+write_reg_o 
+alu_control
+spec_reg_write_en_o
+label_reg_write_en_o
+fs_write_en_o
+gs_write_en_o
+mem_write_enable_o
+

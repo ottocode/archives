@@ -1,0 +1,46 @@
+
+\newcommand{\mm}{mm$^2$}
+\newcommand{\figtitle}[1]{\textbf{#1}}
+
+\newcommand{\fixme}[1]{{\color{red}\textbf{#1}}}
+\newcommand{\us}{$\mu$s}
+
+\definecolor{pink}{rgb}{0.95,0.46,0.75}
+\definecolor{purple}{rgb}{1.0,0.0,1.0}
+
+\newcommand{\nathan}[1]{{\color{green}\textbf{#1}}}
+\newcommand{\ganesh}[1]{{\color{pink}\textbf{#1}}}
+\newcommand{\jack}[1]{{\color{red}\textbf{#1}}}
+\newcommand{\sat}[1]{{\color{blue}\textbf{#1}}}
+\newcommand{\michael}[1]{{\color{yellow}\textbf{#1}}}
+\newcommand{\steve}[1]{{\color{purple}\textbf{#1}}}
+
+\newcommand{\myitem}[1]{\item \textbf{#1}}
+
+\iffalse
+%\iftrue
+\newcommand{\dejuicersfull}{conservation cores}
+\newcommand{\Dejuicersexpl}{Conservation cores}
+\newcommand{\dejuicer}{conservation core}
+\newcommand{\dejuicers}{conservation cores}
+%\newcommand{\dejuiciness}{conservancy}
+\newcommand{\Dejuicer}{Conservation core}
+\newcommand{\Dejuicers}{Conservation cores}
+\newcommand{\DeJuicer}{Conservation Core}
+\newcommand{\DeJuicers}{Conservation Cores}
+\newcommand{\SystemArchitectureName}{GreenGoo}
+
+\else
+ 
+\newcommand{\dejuicersfull}{conservation cores}
+\newcommand{\Dejuicersexpl}{Conservation cores, or {\em c-cores},}
+\newcommand{\dejuicer}{c-core}
+\newcommand{\dejuicers}{c-cores}
+\newcommand{\Dejuicer}{Conservation core}
+\newcommand{\Dejuicers}{Conservation cores}
+\newcommand{\DeJuicer}{Conservation Core}
+\newcommand{\DeJuicers}{Conservation Cores}
+\newcommand{\Dejuicersshort}{C-cores}
+\newcommand{\dejuicersP}{c-core's}
+
+\fi

@@ -1,0 +1,53 @@
+ENTITIES:
+
+;;; events ;;;
+EventQ  ;sort by time
+E
+    attributes:
+        type
+        time
+        queue
+
+;;; time ;;;
+currTime
+pastTime
+
+;;; Customer ;;;
+C
+    attributes:
+        arrivalTime
+        serviceTime
+        exitTime
+        queue
+        magnitude
+
+;;; Queue ;;;
+custQ
+    attributes:
+        num
+        avgtotalQlen
+        avgtotalServiceTime
+        avgtotalSysTime
+custQ.q
+    attributes:
+        maxlen
+        size
+        avgQlen
+        avgServiceTime
+        avgSysTime
+        distribution ;; type and mean
+        dropcount
+        
+;;; Servers ;;;
+S   ;list of servers
+S.s 
+    attributes:
+        available
+        queue
+        Customer
+        lastIdleStart
+        idleTime
+        tdm             ; for time division multiplexing
+        distribution    ; type and mean
+
+
