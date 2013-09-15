@@ -1,5 +1,9 @@
 For the record, we are using "Software Engineering" by Sommerville, 9th edition.
 
-total.txt is the compilation of all of the notes from each chapter.
+total.tex is the compilation of all of the notes from each chapter.
 
 Otherwise, each chapter will have it's own file.
+
+
+If you don't know latex and don't want to learn, just write things as you otherwise normally would.
+If I have time, I'll go in and add the mark-up to make things look nice.
