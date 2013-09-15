@@ -1,4 +1,5 @@
 /* Informal explaination of our group project.
+ * TODO: Expand this and write in complete sentences.
 */
 
 
