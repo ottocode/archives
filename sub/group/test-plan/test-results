@@ -1,0 +1,87 @@
+\documentclass[12pt]{article}
+\begin{document}
+Note: All tests were done concurrently in Mozilla Firefox and Google Chrome.  Results were consistent on both platforms.  (Compatibility Testing)
+
+\section{Conformance and Function Testing}
+FUN-TST1: Account creation
+\begin{enumerate}
+  \item E-mail is incorrectly entered. \\
+    An error message is displayed, prompting the user to enter a valid e-mail address. (Expected Output)
+  \item Account creation fields are left blank. \\
+    If any fields are left empty, a message will appear next to each empty field which informs the user that the field is required. (Expected Output)
+  \item An e-mail already in use has been entered. \\
+    No notification is made unless all other fields are entered, which causes a notification stating the e-mail is already is use.  (Expected Output)
+  \item All fields are correctly entered. \\
+    A user account is created and the user is kept on the registration page. (\textbf{Incorrect: Should be sent to home page})
+\end{enumerate}
+
+FUN-TST2: Account login
+\begin{enumerate}
+  \item E-mail field is incorrectly entered. \\
+    No note is made about the invalid e-mail, unless a password is entered.  In that case, a message is displayed stating the e-mail is not in the database.  (Contained in Case 2.2)
+  \item E-mail is not contained in the \verb|ConMan| database. \\
+    A notification appears stating the e-mail does not exist in the database.  (Expected Output)
+  \item The password and e-mail combination do not match. \\
+    An error message appears stating the password is incorrect.  (Expected Output)
+  \item The password or e-mail fields are left blank. \\
+    The user is told that the blank fields are required.  (Expected Output)
+  \item The password and e-mail combination are valid. \\
+    The user is logged in and redirected to the \verb|ConMan| home page.  (Expected Output)
+\end{enumerate}
+
+FUN-TST3: Team Creation
+\begin{enumerate}
+  \item Team e-mail field is incorrectly entered. \\
+    \textbf{Email field is unchangeable?}
+  \item The password or e-mail fields are left blank. \\
+    \textbf{No password field?}
+  \item The e-mail field is valid and all other entries are included. \\
+    A team is created and the user is automatically added to the team as its administrator.  (Expected Output)
+\end{enumerate}
+
+FUN-TST4: Add team members
+\begin{enumerate}
+  \item E-mail field is incorrectly entered. \\
+    The user is prompted for a valid e-mail address.  (Expected Output)
+  \item The e-mail field is valid but no user with that e-mail is associated with a \verb|ConMan| account \\
+    An error is displayed which says that the user must be in the \verb|ConMan| database to be added.  (Expected Output)
+  \item The e-mail field is valid and all other entries are included \\
+    The user is notified that the other user has been added to the team.  They can now both see the team in their \verb|ConMan| accounts.  (Expected Output)
+\end{enumerate}
+
+FUN-TST5: Add tasks
+\begin{enumerate}
+  \item Alice is in her basic context when she clicks ``add task.'' \\
+  \begin{itemize}
+    \item Alice leaves a required field blank. \\
+        \textbf{There does not seem to be a ``basic context'' for anyone, and users cannot add tasks to Teams of which they are not an admin.}
+    \item The date manually entered by Alice was for some point in the past.
+    \item The e-mail field is valid and all other entries are included.
+  \end{itemize}
+  Alice is in her ``Task-buster Trio'' context when she clicks ``add task.''
+  \begin{itemize}
+    \item Alice leaves a required field blank. \\
+        An error message appears next to all required fields, prompting that empty fields should be included.  (Expected Output)
+    \item The date manually entered by Alice was for some point in the past. \\
+        The task is created, but the actual date entered for the task is changed to the time of task creation.  (\textbf{Incorrect; an error should appear prompting for a date in the future})
+    \item The e-mail field is valid and all other entries are included. \\
+        When all entries are filled in, the task is created and viewable by the user on other pages.  (Expected Output; \textbf{No email field?})
+  \end{itemize}
+\end{enumerate}
+
+\section{Security Testing}
+\begin{enumerate}
+  \item SEC-TEST-1: Attempt to access and page in \verb|ConMan| without being signed-in. \\
+    The client is unable to access any page except for the registration page.  (Expected Output)
+  \item SEC-TEST-2: Attempt to access any page in \verb|ConMan| when signed-in. \\
+    The user is able to access any page in \verb|ConMan| while signed-in.  (Expected Output)
+  \item SEC-TEST-3: Attempt to update or delete a team of which the user is not the administrator. \\
+    Neither updates nor deletions are allowed for a team in which the user does not have administrator privileges.  (Expected Output)
+  \item SEC-TEST-4: Attempt to create, update, or delete a task associated with a team that the user does not have administrator privileges. \\
+    The user is not allowed to perform any of the above operations for a team which they do not have administrator privileges.  (Expected Output)
+  \item SEC-TEST-5: Attempt to assign/un-assign users from tasks associated with a team that the user does not have administrator privileges. \\
+    User assignment and un-assignment are disallowed for a team if the user does not have administrator privileges.  (Expected Output)
+  \item SEC-TEST-6: Attempt to create notes for tables that the user does not have administrator rights. \\
+    Notes cannot be added if the user lacks administrator privileges for the team.  (Expected Output)
+\end{enumerate}
+\end{document} 
