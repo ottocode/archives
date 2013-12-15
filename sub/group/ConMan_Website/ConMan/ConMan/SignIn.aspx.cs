@@ -37,6 +37,7 @@ namespace ConMan
                 // with the email
                 if (user.Password.Equals(tbxPasswordSignIn.Text))
                 {
+                    UserTasksDAL.email_notifications_signin(user);
                     FormsAuthentication.RedirectFromLoginPage(user.Email, false);
                 }
                 else

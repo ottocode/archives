@@ -5,6 +5,7 @@ using System.Web;
 using System.Configuration;
 using System.Data.SqlClient;
 using System.Data;
+using System.Collections;
 
 namespace ConMan.App_Code.DAL
 {
@@ -171,5 +172,48 @@ namespace ConMan.App_Code.DAL
 
             return wasDeleteSuccessful;
         }
+
+        public static void email_notifications_signin(Entities.User theUser)
+        {
+            String connString = ConfigurationManager.ConnectionStrings["SqlDatabaseConnString"].ConnectionString;
+
+            List<Int64> taskIDs = new List<Int64>();
+            using (SqlConnection sqlConn = new SqlConnection(connString))
+            {
+                String insertCommand = "SELECT Task.task_id FROM Task, TeamMember WHERE TeamMember.team_mem_id = Task.team_id and TeamMember.user_mem_id = @user_id;";
+                SqlCommand command = new SqlCommand(insertCommand, sqlConn);
+                command.Parameters.Add("@user_id", SqlDbType.Int);
+                command.Parameters["@user_id"].Value = theUser.ID;
+
+                try
+                {
+                    SqlDataAdapter dataAdapter = new SqlDataAdapter();
+                    dataAdapter.SelectCommand = command;
+                    DataSet ds = new DataSet();
+                    dataAdapter.Fill(ds);
+
+                    sqlConn.Open();
+                    IEnumerator enumerator = ds.Tables[0].Rows.GetEnumerator();
+                    for (int x = 0; enumerator.MoveNext(); x++)
+                    {
+                        taskIDs.Add(Convert.ToInt64(ds.Tables[0].Rows[x]["task_id"]));
+                    }
+                    sqlConn.Close();
+                }
+                catch (SqlException sqlEx)
+                {
+                    Console.WriteLine(sqlEx.Message);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+            foreach(int tid in taskIDs){
+                Entities.Task nexttask = DAL.TaskDAL.GetTaskByID(tid);
+                Email.EmailManager.lazyNotify(nexttask, theUser);
+            }
+        }
+
     }
 }

@@ -56,9 +56,9 @@
     <Content Include="Account\ChangePasswordSuccess.aspx" />
     <Content Include="Account\Login.aspx" />
     <Content Include="Account\Register.aspx" />
-    <Content Include="App_Data\Database.mdf" />
-    <Content Include="App_Data\Database_log.ldf">
-      <DependentUpon>Database.mdf</DependentUpon>
+    <Content Include="App_Data\nickDB.mdf" />
+    <Content Include="App_Data\nickDB_log.ldf">
+      <DependentUpon>nickDB.mdf</DependentUpon>
     </Content>
     <Content Include="Images\banner.png" />
     <Content Include="SignIn.aspx" />
@@ -119,6 +119,7 @@
     <Compile Include="App_Code\DAL\TeamDAL.cs" />
     <Compile Include="App_Code\DAL\TeamMemberDAL.cs" />
     <Compile Include="App_Code\DAL\UserTasksDAL.cs" />
+    <Compile Include="App_Code\Email\EmailManager.cs" />
     <Compile Include="App_Code\Entities\Task.cs" />
     <Compile Include="App_Code\Entities\Team.cs" />
     <Compile Include="App_Code\Entities\User.cs" />

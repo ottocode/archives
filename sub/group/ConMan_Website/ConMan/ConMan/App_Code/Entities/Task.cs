@@ -40,5 +40,10 @@ namespace ConMan.App_Code.Entities
         public DateTime DueDate { get; set; }
 
         public String Description { get; set; }
+
+        public Boolean lazyNotify()
+        {
+            return false;
+        }
     }
 }
