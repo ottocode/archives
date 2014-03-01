@@ -1,0 +1,219 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Configuration;
+using System.Data.SqlClient;
+using System.Data;
+using System.Collections;
+
+namespace ConMan.App_Code.DAL
+{
+    public class UserTasksDAL
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="taskID"></param>
+        /// <param name="userID"></param>
+        /// <returns>The id of the user that was added to the Task</returns>
+        public static Int64 AddUserToTask(Int64 taskID, Int64 userID)
+        {
+            String connString = ConfigurationManager.ConnectionStrings["SqlDatabaseConnString"].ConnectionString;
+
+            Int64 addedUserID = 0;
+            using (SqlConnection sqlConn = new SqlConnection(connString))
+            {
+                // Create SQL Insert Command for creating new Team Table entry
+                // We get the ID of the newly inserted entry by using "OUTPUT INSERTED.team_id"
+                String insertCommand = "INSERT INTO UserTasks (task_id, user_id) OUTPUT INSERTED.user_id VALUES (" +
+                                            "@task_id, @user_id);";
+                SqlCommand command = new SqlCommand(insertCommand, sqlConn);
+                command.Parameters.Add("@task_id", SqlDbType.Int);
+                command.Parameters["@task_id"].Value = taskID;
+                command.Parameters.Add("@user_id", SqlDbType.Int);
+                command.Parameters["@user_id"].Value = userID;
+
+                try
+                {
+                    sqlConn.Open();
+                    // Execute scalar returns the element at the 1st column of the data inserted( which should be the ID)
+                    addedUserID = Convert.ToInt64(command.ExecuteScalar());
+                    sqlConn.Close();
+
+                }
+                catch (SqlException sqlEx)
+                {
+                    Console.WriteLine(sqlEx.Message);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+            return addedUserID;
+        }
+
+        /// <summary>
+        /// Removes the User with the specified ID from the UserTasks ID
+        /// </summary>
+        /// <param name="userID"></param>
+        /// <returns></returns>
+        public static bool RemoveUserFromTask(Int64 taskID, Int64 userID)
+        {
+            // Flag that signals whether the record has been deleted successfully
+            bool successfullyDeleted = false;
+
+            String connectionString = ConfigurationManager.ConnectionStrings["SqlDatabaseConnString"].ConnectionString;
+
+            using (SqlConnection sqlConn = new SqlConnection(connectionString))
+            {
+
+                String deleteTeamCommand = "DELETE UserTasks WHERE task_id = @task_id AND user_id = @user_id";
+
+                SqlCommand command = new SqlCommand(deleteTeamCommand, sqlConn);
+                command.Parameters.Add("@task_id", SqlDbType.Int);
+                command.Parameters["@task_id"].Value = taskID;
+                command.Parameters.Add("@user_id", SqlDbType.Int);
+                command.Parameters["@user_id"].Value = userID;
+
+                sqlConn.Open();
+                int numRowsAffected = command.ExecuteNonQuery();
+                sqlConn.Close();
+
+                // If one row was affected, then we successfully deleted the Team
+                if (numRowsAffected > 0)
+                {
+                    successfullyDeleted = true;
+                }
+            }
+
+            return successfullyDeleted;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="taskID"></param>
+        /// <param name="userID"></param>
+        /// <returns></returns>
+        public static bool IsTaskAssignedToUser(Int64 taskID, Int64 userID)
+        {
+            // Data Source=.\SQLEXPRESS;AttachDbFilename=C:\LuisJr\USDSenior1\Software_Engineering\Test_Sites\App_Data\Database.mdf;Integrated Security=True;User Instance=True
+            String connectionString = ConfigurationManager.ConnectionStrings["SqlDatabaseConnString"].ConnectionString;
+            bool isUserAssignedToTask = false;
+
+            using (SqlConnection sqlConn = new SqlConnection(connectionString))
+            {
+
+                String selectCommand = "SELECT * FROM UserTasks WHERE task_id = @task_id AND user_id = @user_id";
+
+                SqlCommand command = new SqlCommand(selectCommand, sqlConn);
+                command.Parameters.Add("@task_id", SqlDbType.Int);
+                command.Parameters["@task_id"].Value = taskID;
+                command.Parameters.Add("@user_id", SqlDbType.Int);
+                command.Parameters["@user_id"].Value = userID;
+
+                try
+                {
+                    sqlConn.Open();
+                    SqlDataReader dr = command.ExecuteReader();
+                    if (dr.Read())
+                    {
+                        isUserAssignedToTask = true;
+                    }
+                    dr.Close();
+                    sqlConn.Close();
+
+                }
+                catch (SqlException sqlEx)
+                {
+                    Console.WriteLine(sqlEx.Message);
+                }
+            }
+
+            return isUserAssignedToTask;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="taskID"></param>
+        /// <returns></returns>
+        public static bool DeleteAllTaskUsers(Int64 taskID)
+        {
+            bool wasDeleteSuccessful = false;
+            String connString = ConfigurationManager.ConnectionStrings["SqlDatabaseConnString"].ConnectionString;
+
+            using (SqlConnection sqlConn = new SqlConnection(connString))
+            {
+
+                // Create SQL Delete Command for deleting all team memberss of the specified team
+                String deleteCommand = "DELETE UserTasks WHERE task_id = @task_id";
+                SqlCommand command = new SqlCommand(deleteCommand, sqlConn);
+                command.Parameters.Add("@task_id", SqlDbType.Int);
+                command.Parameters["@task_id"].Value = taskID;
+
+                try
+                {
+                    sqlConn.Open();
+                    int numRowsAffected = command.ExecuteNonQuery();
+                    sqlConn.Close();
+
+                    // If we got this far, we were successful
+                    wasDeleteSuccessful = true;
+
+                }
+                catch (SqlException sqlEx)
+                {
+                    Console.WriteLine(sqlEx.Message);
+                }
+            }
+
+            return wasDeleteSuccessful;
+        }
+
+        public static void email_notifications_signin(Entities.User theUser)
+        {
+            String connString = ConfigurationManager.ConnectionStrings["SqlDatabaseConnString"].ConnectionString;
+
+            List<Int64> taskIDs = new List<Int64>();
+            using (SqlConnection sqlConn = new SqlConnection(connString))
+            {
+                String insertCommand = "SELECT Task.task_id FROM Task, TeamMember WHERE TeamMember.team_mem_id = Task.team_id and TeamMember.user_mem_id = @user_id;";
+                SqlCommand command = new SqlCommand(insertCommand, sqlConn);
+                command.Parameters.Add("@user_id", SqlDbType.Int);
+                command.Parameters["@user_id"].Value = theUser.ID;
+
+                try
+                {
+                    SqlDataAdapter dataAdapter = new SqlDataAdapter();
+                    dataAdapter.SelectCommand = command;
+                    DataSet ds = new DataSet();
+                    dataAdapter.Fill(ds);
+
+                    sqlConn.Open();
+                    IEnumerator enumerator = ds.Tables[0].Rows.GetEnumerator();
+                    for (int x = 0; enumerator.MoveNext(); x++)
+                    {
+                        taskIDs.Add(Convert.ToInt64(ds.Tables[0].Rows[x]["task_id"]));
+                    }
+                    sqlConn.Close();
+                }
+                catch (SqlException sqlEx)
+                {
+                    Console.WriteLine(sqlEx.Message);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+            foreach(int tid in taskIDs){
+                Entities.Task nexttask = DAL.TaskDAL.GetTaskByID(tid);
+                Email.EmailManager.lazyNotify(nexttask, theUser);
+            }
+        }
+
+    }
+}

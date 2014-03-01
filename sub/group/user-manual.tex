@@ -1,0 +1,150 @@
+\documentclass[12pt]{article}
+\begin{document}
+\newpage
+\tableofcontents
+
+\newpage
+\section{Overview}
+This user manual outlines how to use \verb|ConMan| to create teams, organize its members, assign tasks, and modify a task's information.  The contents are as follows:
+\begin{itemize}
+  \item Gaining Access to \verb|ConMan|
+  \item Configuring Teams
+  \item Configuring Tasks
+\end{itemize}
+
+\newpage
+\section{Gaining Access to ConMan}
+By design, \verb|ConMan| does not allow access to any page except for the Sign-In/Register page unless a user is signed-in.  In order to sign in, one needs to have an account on the database and be able to appropriately send the information to the server.
+\subsection{Creating an Account}
+To make an account, the user must supply the following information into the form on the bottom half of the Sign-In/Register page:
+\begin{itemize}
+  \item First Name
+  \item Last Name
+  \item E-mail Address
+  \item Password (must be supplied twice for verification purposes)
+\end{itemize}
+Once all information is entered into the appropriate fields, pressing the ``Register'' button will create an account and add information to the database if it is all valid.  In the future, this combination of E-mail Address and password may now be used to Sign-In to the \verb|ConMan| website.
+\subsection{Signing In}
+On the top half of the Sign-In/Register, the user simply needs to enter the E-mail Address and password corresponding to their account they had previously registered through the above process
+\subsection{Signing Out}
+Click the link in the top-right of any page on \verb|ConMan| in order to sign-out.  Upon doing so, the user will be automatically signed-out and redirected to the Sign-In/Register page.
+
+\newpage
+\section{Configuring Teams}
+This section provides information on the following topics:
+\begin{itemize}
+  \item Creating a Team
+  \item Viewing a Team
+  \item Updating a Team
+  \item Deleting a Team
+\end{itemize}
+\subsection{Creating a Team}
+To create a team, the user must do the following:
+\begin{enumerate}
+  \item Navigate to \textbf{Team \textgreater~Create Team}.
+  \item Enter the desired name for your team in the box next to ``Team Name''.
+  \item Press the ``Create Team'' button.
+\end{enumerate}
+Once this is done, the user's team will be created and the user will automatically be given administrator privileges for the newly-created team.
+\subsection{Viewing a Team}
+To view a team, the user must do the following:
+\begin{enumerate}
+  \item Navigate to \textbf{Team \textgreater~View Team}.
+  \item Select the desired team to view from the drop-down menu.
+  \item Press the ``View Team Information'' button.
+\end{enumerate}
+Information relevant to the team will now appear on the bottom of the page, including its name, administrator, and a listing of all members of the team (as names and e-mail addresses).
+\subsection{Updating a Team}
+The processes for adding or removing a user to/from a team are nearly identical.  To do either one, the user must do the following:
+\begin{enumerate}
+  \item Navigate to \textbf{Team \textgreater~Update Team}.
+  \item Select the desired team to view from the drop-down menu.
+  \item Type in the name of the user to add/remove in the field marked ``Add Team Member''.
+  \item Press the appropriate button labeled ``Add Member'' or ``Remove Member'' depending upon the user's intent.
+\end{enumerate}
+Note that a user may only add or remove team members on a team on which they have administrator privileges.  The team administrator may not be removed.
+\subsection{Deleting a Team}
+To delete a team from the database, the user must do the following:
+\begin{enumerate}
+  \item Navigate to \textbf{Team \textgreater~Delete Team}.
+  \item Select the desired team to view from the drop-down menu.
+  \item Press the ``Delete Team'' button.
+\end{enumerate}
+A user is only allowed to delete teams for which they have administrator privileges.  Teams may be deleted with members in them; removing all members first is not required.
+
+\newpage
+\section{Configuring Tasks}
+This section provides information on the following topics:
+\begin{itemize}
+  \item Creating a Task
+  \item Viewing a Task
+  \item Changing a Task
+  \item Adding or Removing users on a Task
+  \item Adding a note to a Task
+  \item Deleting a Task
+\end{itemize}
+\subsection{Creating a Task}
+To delete a team from the database, the user must do the following:
+\begin{enumerate}
+  \item Navigate to \textbf{Tasks \textgreater~Create a Task}.
+  \item Enter in the task name into the ``Task Name'' field.
+  \item Select the desired Due Date in the calendar by which the task should be completed.
+  \item Enter in a description for the task in the ``Description'' field.
+  \item Select the team to which the task will be added from the drop-down menu.
+  \item Press the ``Create Task'' button.
+\end{enumerate}
+A task may only be added for a team in which the user has administrator privileges.
+\subsection{Viewing a Task}
+To view a task, the user must do the following:
+\begin{enumerate}
+  \item Navigate to \textbf{Tasks \textgreater~View a Task}.
+  \item Select the team to which the task belongs from the drop-down menu denoted ``Select Team''.
+  \item Select the appropriate task from the next drop-down menu marked ``Select Task''.
+  \item Press the ``View Task'' button.
+\end{enumerate}
+Upon pressing the ``View Task'' button, all of the fields at the bottom of the page will be automatically be populated with information relevant to the selected task.  The text fields themselves are un-modifiable.  This page will not display notes for a task; those must be viewed under the \textbf{Tasks \textgreater~Add Note to a Task} page.
+\subsection{Changing a Task}
+To change the information associated with a task, the user must do the following:
+\begin{enumerate}
+  \item Navigate to \textbf{Tasks \textgreater~Update a Task}.
+  \item Select the team to which the task belongs from the drop-down menu denoted ``Select Team''.
+  \item Select the appropriate task from the next drop-down menu marked ``Select Task''.
+  \item Press the ``Refresh/Load Task Info'' button.
+  \item Modify the appropriate information field:
+  \begin{itemize}
+    \item \emph{Due Date}: Select the desired new due date from the calendar and press the ``Update Due Date'' button.
+    \item \emph{Description}: Type in the new description for the task and press the ``Update Description'' button.
+  \end{itemize}
+\end{enumerate}
+After loading the task information, the text fields directly below the drop-down menus will be populated with the relevant information.  Once a change has been made, the information may be loaded again and should reflect the change made.  Due Date and Description may be updated independently.
+\subsection{Adding or Removing users on a Task}
+To modify which users are associated with a task, the user must do the following:
+\begin{enumerate}
+  \item Navigate to \textbf{Tasks \textgreater~Add/Remove A User to/from a Task}.
+  \item Select the team to which the task belongs from the drop-down menu denoted ``Select Team''.
+  \item Select the appropriate task from the next drop-down menu marked ``Select Task''.
+  \item Type in the name of the user to add/remove in the field marked `` Assign/unassign user to/from this task''.
+  \item Press the appropriate button labeled ``Add User'' or ``Remove User'' depending upon the user's intent.
+\end{enumerate}
+Adding or removing members associated with a task is only allowed for Teams in which the user has administrator privileges.
+\subsection{Adding a note to a Task}
+To add a note to a task, the user must do the following:
+\begin{enumerate}
+  \item Navigate to \textbf{Tasks \textgreater~Add Note to a Task}.
+  \item Select the team to which the task belongs from the drop-down menu denoted ``Select Team''.
+  \item Select the appropriate task from the next drop-down menu marked ``Select Task''.
+  \item Press the ``Refresh/Load Notes for this Task'' button.
+  \item Enter the note for the task in the ``Enter Note'' field.
+  \item Press the ``Add Note'' button.
+\end{enumerate}
+When the notes are loaded, all other notes for the specified task will be displayed.  Notes may only be added on tasks to which the user is assigned.  Upon successful addition of a note, the page will be reloaded and the new task will appear under the previously-loaded list.
+\subsection{Deleting a Task}
+To delete a task, the user must do the following:
+\begin{enumerate}
+  \item Navigate to \textbf{Tasks \textgreater~Delete a Task}.
+  \item Select the team to which the task belongs from the drop-down menu denoted ``Select Team''.
+  \item Select the appropriate task from the next drop-down menu marked ``Select Task''.
+  \item Press the ``Delete Task'' button.
+\end{enumerate}
+Deletion of a task may only be performed by an administrator of that Task's Team.  For a Task within their team, an administrator may be allowed to delete a task to which they have not been assigned.
+\end{document} 
