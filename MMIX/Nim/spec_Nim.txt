@@ -1,0 +1,80 @@
+Programming the game of Nim in MMIX:
+
+Outline:
+
+A: Brief Hello Message
+    1:  "Welcome to the game of Nim, the object is to be the last player to remove a bean from any of the heaps.
+
+B: Get from user the starting state of game
+    1:  Tell user how to enter values
+        a: "Please indicate the beans in each heap by entering the number of beans in each heap, separated by a space"
+            "Indicate you are done entering values by entering a heap with 0 beans"
+    2:  Get those values
+        a: For each integer entered, create a heap with that many beans
+        b: After reading in a heap with 0 beans, trigger the start of the next section
+        c: If an invalid entry is recorded:
+            1: Tell user they messed up
+                a: "You entered an invalid character, please try again:
+            2: goto B.1
+
+C: Play the game 
+    1:  Ask who shall go first
+        a: "Would you like to go first?  'y' for yes: "
+    2:  Start the game
+        a: Start with C.2.b or C.2.c depending on C.1.
+        b: User's turn
+            1: Prompt for move:
+                a: "Please select which heap and how many beans to remove by typeing <heap> <beans> folowed by the <return> key"
+                b: Display the current state of the game for example:
+                    1: heaps  |  beans
+                       ---------------
+                          1   |  5      
+                          2   |  7
+                          3   |  8
+                          4   |  0     <- minus 3 beans     
+                    The "<-" indicates the computer's last move (not present if user is first to go)
+                c: Check if user input was valid
+                    1: if yes, make the move
+                        a: Prompt "Removing <num> beans from <heap> heap
+                    2: if no, prompt:
+                        a: "You selected an invalid move, please try again"
+                        b: goto C.2.b.1
+            2: Check state of game
+                a: If all heaps have 0 beans,
+                    1: Prompt win
+                        a: "Congratulations!  You have won the game of Nim!"
+                        b: goto C.3
+                b: Otherwise, goto C.2.c
+        c: Computer's turn
+            1: Prompt: "Computer making move"
+            2: Calculate <NimSum>
+            3: If <NimSum> = 0
+                a: Find <heap> with most beans
+                    1: if <beans> > 1
+                        a: remove SR <beans>  (<beans>/2)
+                    2: Otherwise, remove <beans>
+            4: If <NimSum> != 0
+                a: For <heap> in heaps
+                    1: Calculate XOR <val>,<beans>,<NimSum>
+                    2: if <val> < <beans>
+                        a: remove <beans - val> from <heap>
+                        b: goto C.2.c.5
+            5: Check state of game
+                a: If all heaps have 0 beans,
+                    2: Prompt computer win
+                        a: "Sorry, you have lost!"
+                        b: goto C.3
+                b: Otherwise, goto C.2.b
+    3:  End the game
+        a: Prompt "Thanks for playing"
+        b: Exit
+
+
+Memory blocks:
+
+    A: Game state:
+        <heaps> octobytes containing <beans>.
+        <beans> are signed integers
+        First negative value in memory indicates end of memory block
+    B: User Input
+        Will be converted into Game state

@@ -1,0 +1,10 @@
+MMIX work that I have done.
+
+beer.mms Is a program I found on the internet.  The author's information is at the top of the program.  I have it here as a useful reference.
+
+Most of this here will have been created for USD's Comp 280, Introduction to Assembly Language
+
+There are multiple issues with some of the programs, they are presented here not for accuracy, but for learning purposes.
+
+"I don't always code in assembly, but when I do,
+    I use MMIX."
