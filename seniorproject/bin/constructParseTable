@@ -1,0 +1,3 @@
+#!/bin/bash
+
+python $HOME/git/seniorproject/bin/buildParseTable.py $1

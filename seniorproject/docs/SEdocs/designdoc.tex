@@ -1,0 +1,267 @@
+\documentclass{article}
+
+\usepackage{fancyhdr}
+\setlength{\headheight}{12pt}
+\setlength{\textwidth}{17.2cm} \setlength{\textheight}{23cm}
+\setlength{\topmargin}{-2.5cm} \setlength{\headsep}{1.6cm}
+\setlength{\evensidemargin}{-.8cm}
+\setlength{\oddsidemargin}{-.8cm}
+%\pagestyle{fancy}
+
+%set-up page dimentions
+\usepackage[top=1.5 in, bottom = 1.5 in ,left = 1.5 in, right = 1.5in]{geometry}
+
+\setlength{\parskip}{12pt}  % 12 pt = space between paragraphs
+\setlength{\parindent}{0pt} % 0 pt  = indentation
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{ifthen}
+\usepackage{latexsym}
+\usepackage{graphicx}
+\usepackage{graphics}
+\usepackage{psfrag}
+\usepackage{graphpap}
+\usepackage{setspace}
+\renewcommand{\P}{\text{P}}
+\newcommand{\C}{\text{C}}
+
+
+\newcommand{\natnums}{{\mathbb N}}
+\newcommand{\algnums}{{\mathbb A}}
+\newcommand{\rationals}{{\mathbb Q}}
+\newcommand{\reals}{{\mathbb R}}
+\newcommand{\norm}[1]{\left|\left|#1\right|\right|}
+\newcommand{\unorm}[1]{{\left|\left|#1\right|\right|_u}}
+\newcommand{\scriptR}{\mathcal{R}}
+\newcommand{\scriptP}{\mathcal{P}}
+\newcommand{\taggedP}{\dot{\mathcal{P}}}
+\newcommand{\scriptQ}{\mathcal{Q}}
+\newcommand{\taggedQ}{\dot{\mathcal{Q}}}
+
+
+% Allows hyperlinks if compiled with pdflatex
+\usepackage{hyperref}
+\hypersetup{colorlinks}
+\usepackage{color}
+\definecolor{darkred}{rgb}{0.5,0,0}
+\definecolor{darkgreen}{rgb}{0,0.5,0}
+\definecolor{darkblue}{rgb}{0,0,0.5}
+\hypersetup{ colorlinks,
+                linkcolor=darkblue,
+                filecolor=darkgreen,
+                urlcolor=darkblue,
+                citecolor=darkblue }
+%hyperlink example is: \href{http://www.google.com}{google}
+
+%add code!
+\usepackage{listings}
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+\definecolor{mymauve}{rgb}{0.58,0,0.82}
+\lstset{ %
+backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}
+basicstyle=\footnotesize,        % the size of the fonts that are used for the code
+breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+breaklines=true,                 % sets automatic line breaking
+captionpos=b,                    % sets the caption-position to bottom
+commentstyle=\color{mygreen},    % comment style
+deletekeywords={...},            % if you want to delete keywords from the given language
+escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
+extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+frame=single,                    % adds a frame around the code
+keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+keywordstyle=\color{blue},       % keyword style
+language=C,                 % the language of the code
+morekeywords={*,...},            % if you want to add more keywords to the set
+numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
+numbersep=5pt,                   % how far the line-numbers are from the code
+numberstyle=\tiny\color{mygray}, % the style that is used for the line-numbers
+rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+showstringspaces=false,          % underline spaces within strings only
+showtabs=false,                  % show tabs within strings adding particular underscores
+stepnumber=2,                    % the step between two line-numbers. If it's 1, each line will be numbered
+stringstyle=\color{mymauve},     % string literal style
+tabsize=2,                       % sets default tabsize to 2 spaces
+title=\lstname                   % show the filename of files included with \lstinputlisting; also try caption instead of title
+}
+
+\newcommand{\NOCCVersion}{0.0.1}
+
+\begin{document}
+\begin{center}
+\Huge
+Design Document\\\vspace{2cm}
+\texttt{NOCC}\\\vspace{1cm}
+\Large
+Version \NOCCVersion\\
+\today
+\end{center}
+
+\newpage
+\section{Introduction}
+To simplify design, NOCC will be designed with the singular focus of creating a working compiler that targets the ARMv6 architecture.
+Whereas other compilers (namely LLVM) strive to be highly modular and allow for swapping out "font" and "back-ends," any such flexibility found in NOCC is purely accidental.
+The most limited resource in developing NOCC is time, a fact which will drive all development and design decisions.
+
+NOCC essentially runs two separate programs, the preprocessor and the rest of the compiler.
+The output of the preprocessor is only another source code file - but with all preprocessor directives carried out.
+No data-structures or other variables will be carried over from the preprocessor stage to the remaining execution.
+
+\section{Data Design}
+
+\subsection{Preprocessor}
+The preprocessor symbol table will be pre-seeded with the following keywords:
+\begin{center}
+\begin{tabular}{c c c}
+\#  &   define & error\\
+include &   ifdef & pragma\\
+ifndef &   undef & line\\
+elif    &   else & endif\\
+\end{tabular}
+\end{center}
+
+\subsection{NOCC}
+Global structures for NOCC include the symbol table, the parse tree, and others to be determined.
+
+The scanner will de-construct the source code into a stream of tokens.
+Tokens are C structures that contain the following information:
+\begin{itemize}
+\item type. The token class (keyword, identifier, constant, string literal, operator, or other).
+\item file\_num. The file this token was taken from (for cases when multiple files are being compiled).
+\item line\_num.  The line which the token occurred.
+\item lexeme\_length.  The number of characters which make up the lexeme.
+\item lexeme.  The actual token characters.
+\item More to be determined.
+\end{itemize}
+
+The symbol table for NOCC will be implemented as a hash-table pre-seeded with the following keyword tokens:
+\begin{center}
+\begin{tabular}{c c c}
+auto &break & case\\
+char & const & continue\\
+default & do & double\\
+else & enum & extern\\
+float & for & goto\\
+if & int & long\\
+register & return & short\\
+signed & sizeof & static\\
+struct & switch & typedef\\
+union & unsigned & void\\
+volatile & while  & \\
+\end{tabular}
+\end{center}
+
+\section{Architectural and Component-Level Design}
+While large portions of the architecture still need to be worked out, NOCC can be split into the following groups:
+\begin{itemize}
+\item the preprocessor
+\item the scanner
+\item the parser/code-generator
+\item and the back-end.
+\end{itemize}
+A small amount of control code will exist on top of the  groups to handle proper program control flow (for example, calling the parser/code-generator when preprocessing is finished).
+See attached appendix for a rough drawing of the current architecture set-up.
+
+\subsection{Preprocessor Interface Specification}
+The preprocessor can be started using the following interface:\\ \\ 
+\texttt{FILE * begin\_preprocessing(char *file\_name, char args);}\\ \\
+where \texttt{file\_name} contains the absolute path to the file to pre-process and \texttt{args} is greater than 0 to produce preprocessor output.
+The returned file pointer will be the output of the preprocessor.
+
+\subsection{Scanner Interface Specification}
+The scanner is implemented as a separate group because it will be called directly by both the preprocessor and parser/code-generator.
+The interface is given by the following header file:
+
+\begin{lstlisting}
+#include <stdlib.h>
+#include <stdio.h>
+#include "../utility/structures.h"
+
+enum  STATES{EMPTY, ID_KW, 
+            C_NUM, C_NUMU, C_NUML, C_NUMUL, 
+            C_HEX0, C_HEX1, 
+            C_DF, C_FE, C_FS, C_FED, C_FF, C_FL, C_F,
+            C_CO, C_CE, C_CD, C_CC,
+            S_O, S_E, S_D, S_C,
+            OP, OP1, OP2};
+
+/** Convert Enum To String
+ *  -----------
+ *  For debuggin purposes.
+ *
+ *  state: the state of the scanner
+ *
+ *  returns: "state" 
+ */
+const char* getEnumName(enum STATES state);
+
+
+/** Open a File
+ *  -----------
+ *  Opens a file and assigns pointer to file_p.
+ *      If file_p points to a value other than NULL, a 2 is returned.
+ *      Thus, it is up to the caller to ensure that all previously opened
+ *      files have been closed
+ *
+ *  filename:  the name of file to open
+ *  args:  the file attributes with which to open
+ *
+ *  returns:  0 if file successfully opened, 1 otherwise.
+ */
+int open_file(const char *filename, const char *args);
+
+/** Close a File
+ *  ------------
+ *  Closes the file pointed to by file_p.
+ *      Assignes file_p to NULL.
+ *      It is not an error to call close_file if file_p is already NULL
+ *
+ *  returns:  0 on success, 1 on error
+ */
+int close_file();
+
+/** Get Remaining Characters
+ *  ------------------------
+ *  Determines the number of characters remaining after lb (lexeme beginning)
+ *
+ *  returns:  number of characters remaining.
+ *              If no file is currently opened, then 0 is returned.
+ */
+unsigned long remaining_characters();
+
+/** Get Next Token
+ *  --------------
+ *  Get the next token in the file
+ *
+ *  returns:  a pointer to a token structure corresponding to next character sequence in file.
+ *              If no file is currently opened, then NULL is returned.
+ *              If token cannot be parsed, then (void *)1 is returned.
+ */
+struct token *get_next_token();
+
+#endif
+\end{lstlisting}
+
+\subsection{Other Interface Specifications}
+The interface for the other groups is still to be determined.  It is entirely possible that more groups will be created as the required task becomes clearer.
+
+
+\section{User Interface Design}
+The user interface for NOCC is a Unix style command line.  The standard interaction is given by:\\ \\
+\texttt{nocc file.c}\\ \\
+where \texttt{file.c} is the file to be compiled.
+The optional preprocessor commands, halt after preprocessing and produce preprocessor output will be given by:\\ \\
+\texttt{nocc -po file.c}\\ \\
+and\\ \\
+\texttt{nocc -ph file.c}\\ \\
+respectively.
+
+\section{Testing}
+Testing is to be a continuous process along with development.
+As new features and capabilities are added, tests will be immediately (if not concurrently) written to ensure proper execution and functionality.
+While testing will not be robust enough to provably show correctness of the compiler, it should give reasonable assurances that the compiled output is what the original programmer intended.
+Additionally, testing should be sufficient to indicate areas where NOCC may perform incorrectly.
+
+\end{document}

@@ -1,0 +1,126 @@
+Symbols:
+    compound-statement
+    declaration-list
+    declaration
+    declaration-specifiers
+    type-qualifier
+    type-specifier
+    typedef-name
+    statement-list
+    statement
+    jump-statement
+    expression-statement
+    expression
+    assignment-expression
+    assignment-operator
+    lvalue
+    rvalue
+    logical-or-expression
+    logical-and-expression
+    inclusive-or-expression
+    exclusive-or-expression
+    and-expression
+    equality-expression
+    relational-expression
+    shift-expression
+    additive-expression
+    multiplicative-expression
+    cast-expression
+    reference-operator
+    postfix-expression
+    primary-expression-list
+    primary-expression
+
+Grammar:
+    compound-statement:
+        { declaration-list_ statement-list_ }
+    declaration-list:
+        declaration
+        declaration declaration-list 
+    declaration:
+        declaration-specifiers ;
+    declaration-specifiers:
+        type-qualifier_ type-specifier typedef-name
+    type-qualifier: one of
+        const volatile signed unsigned
+    type-specifier: one of
+        void char short int long float double
+    typedef-name:
+        identifier
+    statement-list:
+        statement
+        statement statement-list
+    statement:
+        expression-statement
+        jump-statement
+    jump-statement:
+        goto identifier ;
+    expression-statement:
+        expression_ ;
+    expression:
+        assignment-expression
+    assignment-expression:
+        lvalue assignment-operator rvalue
+    assignment-operator:
+        =
+    lvalue:
+        postfix-expression
+        reference-operator postfix-expression
+    rvalue: one of
+        logical-or-expression
+        logical-and-expression
+        inclusive-or-expression
+        exclusive-or-expression
+        and-expression
+        equality-expression
+        relational-expression
+        shift-expression
+        additive-expression
+        multiplicative-expression
+        cast-expression
+        postfix-expression
+    logical-or-expression:
+        lvalue || lvalue
+    logical-and-expression:
+        lvalue && lvalue
+    inclusive-or-expression:
+        lvalue | lvalue
+    exclusive-or-expression:
+        lvalue ^ lvalue
+    and-expression:
+        lvalue & lvalue
+    equality-expression:
+        lvalue == lvalue
+        lvalue != lvalue
+    relational-expression:
+        lvalue < lvalue
+        lvalue <= lvalue
+        lvalue > lvalue
+        lvalue >= lvalue
+    shift-expression:
+        lvalue >> lvalue
+        lvalue << lvalue
+    additive-expression:
+        lvalue + lvalue
+        lvalue - lvalue
+    multiplicative-expression:
+        lvalue * lvalue
+        lvalue / lvalue
+        lvalue % lvalue
+    cast-expression:
+        ( type-specifier ) lvalue
+    reference-operator:
+        &
+        *
+    postfix-expression:
+        primary-expression
+        primary-expression [ primary-expression ]
+        primary-expression ( primary-expression-list_ )
+        primary-expression . identifier
+    primary-expression-list:
+        primary-expression
+        primary-expression primary-expression-list
+    primary-expression:
+        identifier
+        constant
+        string

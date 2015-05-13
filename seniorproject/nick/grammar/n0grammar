@@ -1,0 +1,92 @@
+compound-statement
+    /{ /}
+    /{ statement-list /}
+
+statement-list
+    statement
+
+statement
+    expression-statement
+
+expression-statement
+    /;
+    expression /;
+
+expression
+    assignment-expression
+
+assignment-expression
+    conditional-expression
+
+conditional-expression
+    logical-or-expression
+
+operation-expression
+    logical-or-expression
+    logical-and-expression
+    inclusive-or-expression
+    exclusive-or-expression
+    and-expression
+    equality-expression
+    relational-expression
+    shift-expression
+    additive-expression
+    multiplicative-expression
+
+logical-or-expression
+    cast-expression /|| cast-expression
+
+logical-and-expression
+    cast-expression /&& cast-expression
+
+inclusive-or-expression
+    cast-expression /| cast-expression
+
+exclusive-or-expression
+    cast-expression /^ cast-expression
+
+and-expression
+    cast-expression /& cast-expression
+    
+equality-expression
+    cast-expression /== cast-expression
+    cast-expression /!= cast-expression
+
+relational-expression
+    cast-expression /< cast-expression
+    cast-expression /> cast-expression
+    cast-expression /<= cast-expression
+    cast-expression />= cast-expression
+
+shift-expression
+    cast-expression /<< cast-expression
+    cast-expression />> cast-expression
+
+additive-expression
+    cast-expression /+ cast-expression
+    cast-expression /- cast-expression
+
+multiplicative-expression
+    cast-expression /* cast-expression
+    cast-expression // cast-expression
+    cast-expression /% cast-expression
+
+cast-expression
+    unary-expression
+
+unary-expression
+    postfix-expression
+
+postfix-expression
+    primary-expression
+
+primary-expression
+    /identifier
+    /constant
+    /string
+
+constant
+    /integer-constant
+    /character-constant
+    /floating-constant
+    /enumeration-constant

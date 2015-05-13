@@ -1,0 +1,209 @@
+\documentclass{article}
+
+\usepackage{fancyhdr}
+\setlength{\headheight}{12pt}
+\setlength{\textwidth}{17.2cm} \setlength{\textheight}{23cm}
+\setlength{\topmargin}{-2.5cm} \setlength{\headsep}{1.6cm}
+\setlength{\evensidemargin}{-.8cm}
+\setlength{\oddsidemargin}{-.8cm}
+%\pagestyle{fancy}
+
+%set-up page dimentions
+\usepackage[top=1.5 in, bottom = 1.5 in ,left = 1.5 in, right = 1.5in]{geometry}
+
+\setlength{\parskip}{12pt}  % 12 pt = space between paragraphs
+\setlength{\parindent}{0pt} % 0 pt  = indentation
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{ifthen}
+\usepackage{latexsym}
+\usepackage{graphicx}
+\usepackage{graphics}
+\usepackage{psfrag}
+\usepackage{graphpap}
+\usepackage{setspace}
+\renewcommand{\P}{\text{P}}
+\newcommand{\C}{\text{C}}
+
+
+\newcommand{\nonterm}[1]{{\textit{#1:}\\ }}
+\newcommand{\production}[1]{{\hspace*{1cm}#1\\ }}
+
+\newcommand{\psymbol}[1]{{\textit{#1}}}
+\newcommand{\terminal}[1]{{\texttt{#1}}}
+\newcommand{\optional}[1]{{#1\(_\text{opt}\) }}
+
+\newcommand{\natnums}{{\mathbb N}}
+\newcommand{\algnums}{{\mathbb A}}
+\newcommand{\rationals}{{\mathbb Q}}
+\newcommand{\reals}{{\mathbb R}}
+\newcommand{\norm}[1]{\left|\left|#1\right|\right|}
+\newcommand{\unorm}[1]{{\left|\left|#1\right|\right|_u}}
+\newcommand{\scriptR}{\mathcal{R}}
+\newcommand{\scriptP}{\mathcal{P}}
+\newcommand{\taggedP}{\dot{\mathcal{P}}}
+\newcommand{\scriptQ}{\mathcal{Q}}
+\newcommand{\taggedQ}{\dot{\mathcal{Q}}}
+
+
+% Allows hyperlinks if compiled with pdflatex
+\usepackage{hyperref}
+\hypersetup{colorlinks}
+\usepackage{color}
+\definecolor{darkred}{rgb}{0.5,0,0}
+\definecolor{darkgreen}{rgb}{0,0.5,0}
+\definecolor{darkblue}{rgb}{0,0,0.5}
+\hypersetup{ colorlinks,
+                linkcolor=darkblue,
+                filecolor=darkgreen,
+                urlcolor=darkblue,
+                citecolor=darkblue }
+%hyperlink example is: \href{http://www.google.com}{google}
+
+%add code!
+\usepackage{listings}
+%\definecolor{mygreen}{rgb}{0,0.6,0}
+%\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+%\definecolor{mymauve}{rgb}{0.58,0,0.82}
+
+\begin{document}
+
+Senior project writeup
+
+\section{NIC Programming Language}
+NIC stands for "Nick's idealized C."  
+The language is idealized in the sense that is is much easier to write a compiler for NIC than C - not that NIC adds any improvements to the original C language
+
+\subsection{NIC Grammar}
+Ther grammar for NIC is based off the C90 grammar specified in \cite{cpl}.
+Numerous modifications were made to make it easier to construct an LL compiler by hand.
+Symbols in \texttt{typewriter font} are considered terminal symbols or placeholders for a terminal token (like \texttt{identifier} which represents a token of type identifier - not literally "identifier").
+
+\nonterm{compound-statement}
+\production{\terminal{\{} \optional{declaration-list} \optional{statement-list} \terminal{\}}}
+\nonterm{declaration-list}
+\production{declaration}
+\production{delclaration declaration-list}
+\nonterm{declaration}
+\production{declaration-specifiers typedef-name \terminal{;}}
+\nonterm{declaration-specifiers}
+\production{\optional{type-qualifier} type-specifier \optional{pointer-qualifier}}
+\nonterm{type-qualifier}
+\production{\textit{one of} \terminal{const} \terminal{volatile} \terminal{signed} \terminal{unsigned}}
+\nonterm{type-specifier}
+\production{\textit{one of} \texttt{void char short int long float double}}
+\nonterm{pointer-qualifier}
+\production{\terminal{*}}
+\production{\terminal{*} pointer-qualifier}
+\nonterm{typedef-name}
+\production{identifier}
+\production{identifier \terminal{[} constant \terminal{]}}
+\nonterm{statement-list}
+\production{statement}
+\production{statement statement-list}
+\nonterm{statement}
+\production{expression-statement}
+\production{jump-statement}
+\production{labeled-statement}
+\nonterm{labeled-statement}
+\production{\terminal{begin} identifier \terminal{:}}
+\nonterm{jump-statement}
+\production{\terminal{goto} identifier identifier \terminal{;}}
+\nonterm{expression-statement}
+\production{\optional{expression} \terminal{;}}
+\nonterm{expression}
+\production{assignment-expression}
+\nonterm{assignment-expression}
+\production{lvalue assignment-operator rvalue}
+\nonterm{assignment-operator}
+\production{\terminal{=}}
+\nonterm{lrvalue}
+\production{postfix-expresstion}
+\production{reference-operator postfix-expression}
+\nonterm{lvalue}
+\production{lpostfix-expression}
+\production{reference-operator lpostfix-expression}
+\nonterm{rvalue}
+\production{logical-OR-expression}
+\production{logical-AND-expression}
+\production{inclusive-OR-expression}
+\production{exclusive-OR-expression}
+\production{AND-expression}
+\production{equality-expression}
+\production{relational-expresion}
+\production{shift-expression}
+\production{additive-expression}
+\production{multiplicative-expression}
+\production{cast-expression}
+\production{direct-expression}
+\nonterm{reference-operator}
+\production{\textit{one of} \terminal{\&} \terminal{*}}
+\nonterm{postfix-expression}
+\production{primary-expression}
+\production{primary-expression \terminal{[} primary-expression \terminal{]}}
+\production{primary-expression \terminal{(} \optional{primary-expression-list} \terminal{)}}
+\production{primary-expression \terminal{.} identifier}
+\nonterm{lpostfix-expression}
+\production{identifier}
+\production{identifier \terminal{[} primary-expression \terminal{]}}
+\production{identifier \terminal{.} identifier}
+\nonterm{primary-expression-list}
+\production{primary-expression}
+\production{primary-expression, primary-expression}
+\nonterm{primary-expression}
+\production{identifier}
+\production{const}
+\production{string}
+\nonterm{logical-OR-expression}
+\production{lrvalue \terminal{||} lrvalue}
+\nonterm{logical-AND-expression}
+\production{lrvalue \terminal{\&\&} lrvalue}
+\nonterm{inclusive-OR-expression}
+\production{lrvalue \terminal{|} lrvalue}
+\nonterm{exclusive-OR-expression}
+\production{lrvalue \terminal{\^} lrvalue}
+\nonterm{AND-expression}
+\production{lrvalue \terminal{\&} lrvalue}
+\nonterm{equality-expression}
+\production{lrvalue \terminal{==} lrvalue}
+\production{lrvalue \terminal{!=} lrvalue}
+\nonterm{relational-expresion}
+\production{lrvalue \terminal{<} lrvalue}
+\production{lrvalue \terminal{<=} lrvalue}
+\production{lrvalue \terminal{>} lrvalue}
+\production{lrvalue \terminal{>=} lrvalue}
+\nonterm{shift-expression}
+\production{lrvalue \terminal{>>} lrvalue}
+\production{lrvalue \terminal{<<} lrvalue}
+\nonterm{additive-expression}
+\production{lrvalue \terminal{+} lrvalue}
+\production{lrvalue \terminal{-} lrvalue}
+\nonterm{multiplicative-expression}
+\production{lrvalue \terminal{*} lrvalue}
+\production{lrvalue \terminal{/} lrvalue}
+\production{lrvalue \terminal{\%} lrvalue}
+\nonterm{cast-expression}
+\production{\terminal{(} type-specifier \terminal{)} lrvalue}
+\nonterm{direct-expression}
+\production{lrvalue}
+
+
+\section{NOC - the NICC Compiler}
+NOC is an acronym for "NIC's Original Compiler."
+NOC is original in both the source code being custom built for this project, but also in the fact that it is the first compiler for the NIC language.
+
+\section{\LaTeX tests}
+Citation tests:\\
+Kernighan and Richie is cited as \cite{cpl} 
+The red dragon book is cited as \cite{reddragon}.
+
+End citation test
+
+Tests of commands:
+
+A terminal symbol comes next \terminal{hereitis}.  
+
+\bibliographystyle{plain}
+\bibliography{sources}
+\end{document}
